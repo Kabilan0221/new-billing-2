@@ -92,7 +92,7 @@ namespace ShopBilling.UI.Forms
 
             InitializeComponent();
             SetupShortcuts();
-            LoadSection(1); // Load POS Billing section (Phase 4 Core)
+            LoadSection(activeNavIndex); // Load default section matching activeNavIndex (Products Master)
         }
 
         private void InitializeComponent()
@@ -148,7 +148,7 @@ namespace ShopBilling.UI.Forms
                 AutoScroll = true
             };
 
-            // 15 Dedicated Navigation Sections (Full Commercial Desktop Suite)
+            // 14 Dedicated Navigation Sections
             string[] navItems = new string[]
             {
                 "Dashboard",                 // 0
@@ -163,9 +163,8 @@ namespace ShopBilling.UI.Forms
                 "Stock — F8",                // 9
                 "Estimates & Invoices — F9", // 10
                 "Reports — F10",             // 11
-                "Backup & Restore",          // 12
-                "Data Management",           // 13
-                "Settings"                   // 14
+                "Delete Management",         // 12
+                "Settings"                   // 13
             };
 
             navButtons = new Button[navItems.Length];
@@ -346,19 +345,12 @@ namespace ShopBilling.UI.Forms
             }
             else if (index == 12)
             {
-                // Backup & Disaster Recovery (Phase 1 Core)
-                var backupControl = new BackupRestoreControl();
-                backupControl.Dock = DockStyle.Fill;
-                panelContent.Controls.Add(backupControl);
-            }
-            else if (index == 13)
-            {
-                // Data Management & Integrity Diagnostics (Phase 7 Core)
+                // Delete Management & Purge Old Data
                 var dataControl = new DataManagementControl(_dataManagementService);
                 dataControl.Dock = DockStyle.Fill;
                 panelContent.Controls.Add(dataControl);
             }
-            else if (index == 14)
+            else if (index == 13)
             {
                 // Application Settings & Business Profile (Phase 7 Core)
                 var settingsControl = new SettingsControl(_settingsService);

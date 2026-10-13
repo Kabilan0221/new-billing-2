@@ -272,20 +272,20 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
         {/* Top Split: Estimates Master List */}
         <div className="flex-1 bg-white border border-[#c0c6cf] rounded shadow-xs flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#e9eef4] border-b border-[#cbd5e1] text-slate-700 font-bold sticky top-0 z-10 select-none">
+            <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[950px]">
+              <thead className="sticky top-0 z-20 select-none shadow-xs">
                 <tr>
-                  <th className="py-1.5 px-3 w-32">Estimate No</th>
-                  <th className="py-1.5 px-3 w-36">Date</th>
-                  <th className="py-1.5 px-3 w-44">Customer</th>
-                  <th className="py-1.5 px-3 w-28">Mobile</th>
-                  <th className="py-1.5 px-3 w-16 text-center">Items</th>
-                  <th className="py-1.5 px-3 w-16 text-center">Qty</th>
-                  <th className="py-1.5 px-3 w-24 text-right">Taxable</th>
-                  <th className="py-1.5 px-3 w-20 text-right">GST</th>
-                  <th className="py-1.5 px-3 w-24 text-right font-black">Grand Total</th>
-                  <th className="py-1.5 px-3 w-24 text-center">Status</th>
-                  <th className="py-1.5 px-3">Converted Invoice #</th>
+                  <th className="py-1.5 px-3 w-32 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Estimate No</th>
+                  <th className="py-1.5 px-3 w-36 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Date</th>
+                  <th className="py-1.5 px-3 w-44 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Customer</th>
+                  <th className="py-1.5 px-3 w-28 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Mobile</th>
+                  <th className="py-1.5 px-3 w-16 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Items</th>
+                  <th className="py-1.5 px-3 w-16 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Qty</th>
+                  <th className="py-1.5 px-3 w-24 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Taxable</th>
+                  <th className="py-1.5 px-3 w-20 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">GST</th>
+                  <th className="py-1.5 px-3 w-24 text-right font-black sticky top-0 z-20 bg-[#e9eef4] text-slate-700 border-b border-r border-[#cbd5e1] whitespace-nowrap">Grand Total</th>
+                  <th className="py-1.5 px-3 w-24 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Status</th>
+                  <th className="py-1.5 px-3 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-[#cbd5e1] whitespace-nowrap">Converted Invoice #</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -372,20 +372,20 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
             </div>
 
             <div className="flex-1 overflow-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-[#e9eef4] border-b border-slate-300 text-slate-700 sticky top-0">
+              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[850px]">
+                <thead className="sticky top-0 z-20 shadow-xs">
                   <tr>
-                    <th className="py-1 px-3 w-10 text-center">#</th>
-                    <th className="py-1 px-3 w-28">Product Code</th>
-                    <th className="py-1 px-3 w-32">Barcode</th>
-                    <th className="py-1 px-3">Description</th>
-                    <th className="py-1 px-3 w-16 text-right">Qty</th>
-                    <th className="py-1 px-3 w-20 text-right">Rate</th>
-                    <th className="py-1 px-3 w-20 text-right">Disc</th>
-                    <th className="py-1 px-3 w-20 text-right">Taxable</th>
-                    <th className="py-1 px-3 w-16 text-center">GST %</th>
-                    <th className="py-1 px-3 w-20 text-right">GST (₹)</th>
-                    <th className="py-1 px-3 w-24 text-right font-bold">Line Total</th>
+                    <th className="py-1 px-3 w-10 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">#</th>
+                    <th className="py-1 px-3 w-28 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Product Code</th>
+                    <th className="py-1 px-3 w-32 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Barcode</th>
+                    <th className="py-1 px-3 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Description</th>
+                    <th className="py-1 px-3 w-16 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Qty</th>
+                    <th className="py-1 px-3 w-20 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Rate</th>
+                    <th className="py-1 px-3 w-20 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Disc</th>
+                    <th className="py-1 px-3 w-20 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">Taxable</th>
+                    <th className="py-1 px-3 w-16 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">GST %</th>
+                    <th className="py-1 px-3 w-20 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">GST (₹)</th>
+                    <th className="py-1 px-3 w-24 text-right font-bold sticky top-0 z-20 bg-[#e9eef4] text-slate-700 border-b border-slate-300 whitespace-nowrap">Line Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

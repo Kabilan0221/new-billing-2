@@ -23,7 +23,6 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onRefreshData }) => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [trendRange, setTrendRange] = useState<'7days' | '30days'>('7days');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const reloadMetrics = () => {
@@ -49,9 +48,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onRefr
       </div>
     );
   }
-
-  const activeTrend = trendRange === '7days' ? metrics.last7DaysSales : metrics.last30DaysSales;
-  const maxTrendSale = Math.max(...activeTrend.map((t) => t.salesAmount), 100);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f0f2f5] overflow-y-auto select-none">
@@ -201,7 +197,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onRefr
 
           {/* Card 9: Payments Received Today */}
           <div
-            onClick={() => onNavigate('payments')}
+            onClick={() => onNavigate('history')}
             className="bg-white p-4 rounded border border-slate-200 border-l-4 border-l-emerald-600 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between">
@@ -227,8 +223,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onRefr
               { label: 'F2: Products', nav: 'products', color: 'hover:bg-emerald-50 text-emerald-800 border-emerald-300' },
               { label: 'F3: Inbound Goods', nav: 'inbound', color: 'hover:bg-purple-50 text-purple-800 border-purple-300' },
               { label: 'F4: Barcode Studio', nav: 'barcode', color: 'hover:bg-indigo-50 text-indigo-800 border-indigo-300' },
-              { label: 'F5: Payments', nav: 'payments', color: 'hover:bg-amber-50 text-amber-800 border-amber-300' },
-              { label: 'F6: Bill History', nav: 'history', color: 'hover:bg-cyan-50 text-cyan-800 border-cyan-300' },
+              { label: 'F5: Bill History', nav: 'history', color: 'hover:bg-cyan-50 text-cyan-800 border-cyan-300' },
+              { label: 'F6: Customers', nav: 'customers', color: 'hover:bg-amber-50 text-amber-800 border-amber-300' },
               { label: 'F7: Suppliers', nav: 'suppliers', color: 'hover:bg-slate-100 text-slate-800 border-slate-300' },
               { label: 'F8: Stock', nav: 'stock', color: 'hover:bg-teal-50 text-teal-800 border-teal-300' },
               { label: 'F9: Estimates', nav: 'invoices', color: 'hover:bg-rose-50 text-rose-800 border-rose-300' },
@@ -242,103 +238,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onRefr
                 {btn.label}
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Sales Overview and Trend Chart Section */}
-        <div className="bg-white rounded border border-slate-200 shadow-xs overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-slate-800">Sales Overview & Daily Billing Trend</h2>
-              <p className="text-xs text-slate-500">
-                Aggregated from confirmed retail invoices excluding cancelled vouchers.
-              </p>
-            </div>
-            <div className="flex items-center gap-1 mt-2 sm:mt-0 bg-slate-100 p-0.5 rounded border border-slate-200">
-              <button
-                onClick={() => setTrendRange('7days')}
-                className={`px-3 py-1 text-xs font-bold rounded transition-colors cursor-pointer ${
-                  trendRange === '7days' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Last 7 Days
-              </button>
-              <button
-                onClick={() => setTrendRange('30days')}
-                className={`px-3 py-1 text-xs font-bold rounded transition-colors cursor-pointer ${
-                  trendRange === '30days' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Last 30 Days
-              </button>
-            </div>
-          </div>
-
-          {/* Bar Chart Representation */}
-          <div className="p-5 border-b border-slate-100">
-            <div className="h-44 flex items-end gap-2 sm:gap-3 overflow-x-auto pb-2">
-              {activeTrend.map((t, idx) => {
-                const heightPercent = Math.max(8, Math.round((t.salesAmount / maxTrendSale) * 100));
-                return (
-                  <div key={idx} className="flex-1 min-w-[32px] flex flex-col items-center group relative">
-                    {/* Tooltip */}
-                    <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] px-2 py-1 rounded pointer-events-none whitespace-nowrap z-10 shadow-md">
-                      <div>{t.dateString}</div>
-                      <div>Sales: ₹{t.salesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                      <div>Bills: {t.billCount} | GST: ₹{t.taxCollected.toFixed(2)}</div>
-                    </div>
-
-                    <div className="text-[10px] font-bold text-slate-600 mb-1">
-                      {t.salesAmount > 0 ? `₹${Math.round(t.salesAmount)}` : '0'}
-                    </div>
-
-                    <div
-                      style={{ height: `${heightPercent}%` }}
-                      className={`w-full rounded-t transition-all ${
-                        t.salesAmount > 0
-                          ? 'bg-gradient-to-t from-blue-700 to-sky-400 group-hover:from-blue-800 group-hover:to-sky-500'
-                          : 'bg-slate-200'
-                      }`}
-                    />
-
-                    <span className="text-[10px] text-slate-500 mt-2 truncate w-full text-center">
-                      {t.dateString.slice(5)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Daily Table Summary */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                  <th className="py-2.5 px-4">Date</th>
-                  <th className="py-2.5 px-4 text-center">Bill Count</th>
-                  <th className="py-2.5 px-4 text-right">GST Collected</th>
-                  <th className="py-2.5 px-4 text-right">Daily Gross Sales Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {activeTrend
-                  .slice()
-                  .reverse()
-                  .map((row, i) => (
-                    <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-2 px-4 font-medium text-slate-800">{row.dateString}</td>
-                      <td className="py-2 px-4 text-center">{row.billCount} bills</td>
-                      <td className="py-2 px-4 text-right text-slate-600">
-                        ₹{row.taxCollected.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-2 px-4 text-right font-bold text-blue-900">
-                        ₹{row.salesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>

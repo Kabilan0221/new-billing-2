@@ -119,6 +119,8 @@ class SQLiteIndexedEngine {
   private estimateNumberIndex = new Map<string, EstimateHeader>();
 
   private is50kLoaded = false;
+  private safetySnapshot: string | null = null;
+  private isInitializing = true;
   private currentNextId = 11;
   private nextSupplierId = 6;
   private nextPurchaseId = 3;
@@ -130,6 +132,91 @@ class SQLiteIndexedEngine {
   private nextEstimateId = 2;
 
   constructor() {
+    this.isInitializing = true;
+    const loaded = this.loadFromLocalStorage();
+    if (!loaded) {
+      this.resetToDefaults();
+    }
+    this.isInitializing = false;
+  }
+
+  private loadFromLocalStorage(): boolean {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return false;
+    }
+    try {
+      const raw = localStorage.getItem('SHOPBILLING_PREVIEW_DATA_V3');
+      if (!raw) return false;
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        console.warn('[ShopBilling Preview] Corrupted LocalStorage payload found. Falling back to default seed catalog.');
+        return false;
+      }
+
+      const validation = this.validatePreviewBackupJson(parsed);
+      if (!validation.valid || !parsed.data) {
+        console.warn('[ShopBilling Preview] Incompatible LocalStorage schema found:', validation.error);
+        return false;
+      }
+
+      const d = parsed.data;
+      this.products = Array.isArray(d.products) ? d.products : [];
+      this.categories = Array.isArray(d.categories) ? d.categories : [];
+      this.subcategories = Array.isArray(d.subcategories) ? d.subcategories : [];
+      this.brands = Array.isArray(d.brands) ? d.brands : [];
+      this.suppliers = Array.isArray(d.suppliers) ? d.suppliers : [];
+      this.purchases = Array.isArray(d.purchases) ? d.purchases : [];
+      this.customers = Array.isArray(d.customers) ? d.customers : [];
+      this.invoices = Array.isArray(d.invoices) ? d.invoices : [];
+      this.estimates = Array.isArray(d.estimates) ? d.estimates : [];
+      this.stockAdjustments = Array.isArray(d.stockAdjustments) ? d.stockAdjustments : [];
+      this.physicalVerifications = Array.isArray(d.physicalVerifications) ? d.physicalVerifications : [];
+      this.stockMovements = Array.isArray(d.stockMovements) ? d.stockMovements : [];
+      this.supplierLedger = Array.isArray(d.supplierLedger) ? d.supplierLedger : [];
+      this.auditLogs = Array.isArray(d.auditLogs) ? d.auditLogs : [];
+      if (d.appSettings) {
+        this.appSettings = d.appSettings;
+      }
+
+      // Recalculate auto-increment IDs safely based on loaded records
+      this.currentNextId = Math.max(1, ...this.products.map((p) => p.id || 0)) + 1;
+      this.nextSupplierId = Math.max(1, ...this.suppliers.map((s) => s.id || 0)) + 1;
+      this.nextPurchaseId = Math.max(1, ...this.purchases.map((p) => p.id || 0)) + 1;
+      this.nextCustomerId = Math.max(1, ...this.customers.map((c) => c.id || 0)) + 1;
+      this.nextInvoiceId = Math.max(1, ...this.invoices.map((i) => i.id || 0)) + 1;
+      this.nextEstimateId = Math.max(1, ...this.estimates.map((e) => e.id || 0)) + 1;
+
+      this.rebuildIndexes();
+      return true;
+    } catch (err) {
+      console.warn('[ShopBilling Preview] Failed to load preview data from LocalStorage:', err);
+      return false;
+    }
+  }
+
+  public saveToLocalStorage(): void {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+    // Protect LocalStorage quota during 50,000 item benchmark
+    if (this.is50kLoaded || this.products.length > 5000) {
+      return;
+    }
+    try {
+      const json = this.exportPreviewJson();
+      localStorage.setItem('SHOPBILLING_PREVIEW_DATA_V3', json);
+    } catch (err: any) {
+      console.warn('[ShopBilling Preview] Failed to persist preview state to LocalStorage:', err?.message);
+    }
+  }
+
+  public clearLocalStoragePreview(): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('SHOPBILLING_PREVIEW_DATA_V3');
+    }
     this.resetToDefaults();
   }
 
@@ -645,6 +732,10 @@ class SQLiteIndexedEngine {
       this.estimateIdIndex.set(est.id, est);
       if (est.estimateNumber) this.estimateNumberIndex.set(est.estimateNumber.trim().toUpperCase(), est);
     }
+
+    if (!this.isInitializing) {
+      this.saveToLocalStorage();
+    }
   }
 
   // -------------------------------------------------------------
@@ -836,6 +927,7 @@ class SQLiteIndexedEngine {
     p.isActive = false;
     p.updatedAt = new Date().toISOString();
     this.logAudit('Product', id.toString(), 'DEACTIVATE', `Deactivated product '${p.nameEn}'`);
+    if (!this.isInitializing) this.saveToLocalStorage();
     return true;
   }
 
@@ -845,6 +937,7 @@ class SQLiteIndexedEngine {
     p.isActive = true;
     p.updatedAt = new Date().toISOString();
     this.logAudit('Product', id.toString(), 'ACTIVATE', `Re-activated product '${p.nameEn}'`);
+    if (!this.isInitializing) this.saveToLocalStorage();
     return true;
   }
 
@@ -2544,6 +2637,7 @@ class SQLiteIndexedEngine {
       customerMobile: inv.customerMobile || '',
       customerGstin: inv.customerGstin || '',
       salesperson: inv.salesperson || 'Admin',
+      paymentMode: (payments.length > 0 ? payments.map((p) => p.paymentMethod).filter(Boolean).join(', ') : inv.paymentMode) || 'Cash',
       status: inv.status || 'Confirmed',
       paymentStatus,
       isInterstate,
@@ -2731,6 +2825,131 @@ class SQLiteIndexedEngine {
     return { success: true };
   }
 
+  public updateInvoice(updatedInv: Partial<InvoiceHeader> & { id: number }): { success: boolean; errors: string[]; invoice?: InvoiceHeader } {
+    const existing = this.invoiceIdIndex.get(updatedInv.id);
+    if (!existing) {
+      return { success: false, errors: ['Invoice not found.'] };
+    }
+
+    const errors: string[] = [];
+    const items = updatedInv.items || existing.items || [];
+    if (items.length === 0) {
+      return { success: false, errors: ['Invoice must contain at least one product item.'] };
+    }
+
+    // If confirmed invoice, check stock delta if items changed
+    if (existing.status === 'Confirmed') {
+      const oldQtyMap = new Map<number, number>();
+      for (const it of existing.items || []) {
+        oldQtyMap.set(it.productId, (oldQtyMap.get(it.productId) || 0) + it.quantity);
+      }
+      const newQtyMap = new Map<number, number>();
+      for (const it of items) {
+        newQtyMap.set(it.productId, (newQtyMap.get(it.productId) || 0) + it.quantity);
+      }
+
+      for (const [prodId, newQty] of newQtyMap.entries()) {
+        const oldQty = oldQtyMap.get(prodId) || 0;
+        const diff = newQty - oldQty;
+        if (diff > 0) {
+          const prod = this.idIndex.get(prodId);
+          if (prod && prod.currentStock < diff) {
+            errors.push(`Insufficient stock for '${prod.nameEn}'. Additional required: ${diff}, available: ${prod.currentStock}.`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        return { success: false, errors };
+      }
+
+      // Apply stock differences
+      const allProdIds = new Set([...oldQtyMap.keys(), ...newQtyMap.keys()]);
+      for (const prodId of allProdIds) {
+        const oldQty = oldQtyMap.get(prodId) || 0;
+        const newQty = newQtyMap.get(prodId) || 0;
+        const diff = newQty - oldQty;
+        if (diff !== 0) {
+          const prod = this.idIndex.get(prodId);
+          if (prod) {
+            const before = prod.currentStock;
+            const after = before - diff;
+            prod.currentStock = after;
+            prod.updatedAt = new Date().toISOString();
+
+            this.stockMovements.unshift({
+              id: this.nextMovementId++,
+              productId: prod.id,
+              productCode: prod.productCode,
+              productName: prod.nameEn,
+              referenceType: 'SALES_INVOICE',
+              referenceId: existing.invoiceNumber,
+              quantity: -diff,
+              quantityBefore: before,
+              quantityAfter: after,
+              notes: `Bill #${existing.invoiceNumber} updated: qty adjusted by ${-diff}`,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+
+    const calculated = this.calculateInvoice({
+      ...existing,
+      ...updatedInv,
+      id: existing.id,
+      invoiceNumber: existing.invoiceNumber,
+      createdAt: existing.createdAt,
+      status: updatedInv.status || existing.status,
+    });
+
+    // Customer balance ledger delta
+    if (existing.status === 'Confirmed') {
+      const oldBalanceDue = existing.balanceDue || 0;
+      const newBalanceDue = calculated.balanceDue || 0;
+      const balanceDiff = newBalanceDue - oldBalanceDue;
+      if (balanceDiff !== 0 && calculated.customerId) {
+        const cust = this.customerIdIndex.get(calculated.customerId);
+        if (cust) {
+          cust.currentBalance = Math.max(0, cust.currentBalance + balanceDiff);
+          cust.updatedAt = new Date().toISOString();
+        }
+      }
+    }
+
+    const idx = this.invoices.findIndex((i) => i.id === existing.id);
+    if (idx !== -1) {
+      this.invoices[idx] = calculated;
+    }
+    this.rebuildIndexes();
+
+    this.logAudit(
+      'Invoice',
+      calculated.invoiceNumber,
+      'UPDATE',
+      `Edited bill #${calculated.invoiceNumber} · ₹${calculated.grandTotal} (${calculated.paymentStatus}) · Payment: ${calculated.payments.map((p) => p.paymentMethod).join(', ') || 'N/A'}`
+    );
+
+    return { success: true, errors: [], invoice: calculated };
+  }
+
+  public updateInvoicePayment(
+    invoiceId: number,
+    payments: InvoicePayment[],
+    notes?: string
+  ): { success: boolean; errors: string[]; invoice?: InvoiceHeader } {
+    const existing = this.invoiceIdIndex.get(invoiceId);
+    if (!existing) {
+      return { success: false, errors: ['Invoice not found.'] };
+    }
+    return this.updateInvoice({
+      id: invoiceId,
+      payments,
+      notes: notes !== undefined ? notes : existing.notes,
+    });
+  }
+
   public getInvoices(filter: InvoiceFilter): PagedResult<InvoiceHeader> {
     const t0 = performance.now();
     const term = filter.searchTerm?.trim().toLowerCase();
@@ -2744,6 +2963,13 @@ class SQLiteIndexedEngine {
       }
       if (filter.paymentStatus && filter.paymentStatus !== 'All' && inv.paymentStatus !== filter.paymentStatus) {
         return false;
+      }
+      if (filter.paymentMethod && filter.paymentMethod !== 'All') {
+        const methodQuery = filter.paymentMethod.toLowerCase();
+        const hasMethod =
+          inv.payments?.some((p) => p.paymentMethod && p.paymentMethod.toLowerCase() === methodQuery) ||
+          (inv.paymentMode && inv.paymentMode.toLowerCase().includes(methodQuery));
+        if (!hasMethod) return false;
       }
       if (filter.fromDate) {
         const from = new Date(filter.fromDate).getTime();
@@ -3853,6 +4079,137 @@ class SQLiteIndexedEngine {
     return {
       success: true,
       message: 'SQLite database VACUUM complete. All indexes rebuilt and query optimizer statistics refreshed.',
+    };
+  }
+
+  // -------------------------------------------------------------
+  // DELETE MANAGEMENT / PURGE OLD DATA METHODS
+  // -------------------------------------------------------------
+  public previewDeleteImpact(
+    startDateStr: string,
+    endDateStr: string,
+    includeEstimates: boolean = true
+  ): {
+    billsCount: number;
+    billsTotalAmount: number;
+    taxAmount: number;
+    paymentsCount: number;
+    estimatesCount: number;
+    estimatesTotalAmount: number;
+    matchingInvoiceNumbers: string[];
+    matchingEstimateNumbers: string[];
+  } {
+    const start = new Date(startDateStr);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDateStr);
+    end.setHours(23, 59, 59, 999);
+
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+
+    // Matching Invoices
+    const matchingInvoices = this.invoices.filter((inv) => {
+      const d = new Date(inv.invoiceDate || inv.createdAt).getTime();
+      return !isNaN(d) && d >= startTime && d <= endTime;
+    });
+
+    let billsTotalAmount = 0;
+    let taxAmount = 0;
+    let paymentsCount = 0;
+
+    for (const inv of matchingInvoices) {
+      billsTotalAmount += inv.grandTotal || 0;
+      taxAmount += inv.totalTaxAmount || 0;
+      paymentsCount += Array.isArray(inv.payments) ? inv.payments.length : 0;
+    }
+
+    // Matching Estimates
+    let matchingEstimates: typeof this.estimates = [];
+    let estimatesTotalAmount = 0;
+
+    if (includeEstimates) {
+      matchingEstimates = this.estimates.filter((est) => {
+        const d = new Date(est.estimateDate || est.createdAt).getTime();
+        return !isNaN(d) && d >= startTime && d <= endTime;
+      });
+      for (const est of matchingEstimates) {
+        estimatesTotalAmount += est.grandTotal || 0;
+      }
+    }
+
+    return {
+      billsCount: matchingInvoices.length,
+      billsTotalAmount,
+      taxAmount,
+      paymentsCount,
+      estimatesCount: matchingEstimates.length,
+      estimatesTotalAmount,
+      matchingInvoiceNumbers: matchingInvoices.map((i) => i.invoiceNumber),
+      matchingEstimateNumbers: matchingEstimates.map((e) => e.estimateNumber),
+    };
+  }
+
+  public purgeDataByDateRange(
+    startDateStr: string,
+    endDateStr: string,
+    options: { includeEstimates: boolean }
+  ): {
+    success: boolean;
+    message: string;
+    deletedBills: number;
+    deletedEstimates: number;
+    deletedGrossAmount: number;
+  } {
+    const start = new Date(startDateStr);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDateStr);
+    end.setHours(23, 59, 59, 999);
+
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+
+    const initialInvoiceCount = this.invoices.length;
+    let deletedGross = 0;
+
+    const remainingInvoices: typeof this.invoices = [];
+
+    for (const inv of this.invoices) {
+      const d = new Date(inv.invoiceDate || inv.createdAt).getTime();
+      if (!isNaN(d) && d >= startTime && d <= endTime) {
+        deletedGross += inv.grandTotal || 0;
+      } else {
+        remainingInvoices.push(inv);
+      }
+    }
+
+    this.invoices = remainingInvoices;
+    const deletedBills = initialInvoiceCount - remainingInvoices.length;
+
+    let deletedEstimates = 0;
+    if (options.includeEstimates) {
+      const initialEstimateCount = this.estimates.length;
+      this.estimates = this.estimates.filter((est) => {
+        const d = new Date(est.estimateDate || est.createdAt).getTime();
+        return isNaN(d) || d < startTime || d > endTime;
+      });
+      deletedEstimates = initialEstimateCount - this.estimates.length;
+    }
+
+    this.rebuildIndexes();
+
+    this.logAudit(
+      'Database',
+      'Purge',
+      'DELETE',
+      `Permanently purged ${deletedBills} bills (₹${deletedGross.toFixed(2)}) and ${deletedEstimates} estimates between ${startDateStr} and ${endDateStr}.`
+    );
+
+    return {
+      success: true,
+      message: `Successfully purged ${deletedBills} retail bill(s) and ${deletedEstimates} estimate(s) from SQLite storage.`,
+      deletedBills,
+      deletedEstimates,
+      deletedGrossAmount: deletedGross,
     };
   }
 

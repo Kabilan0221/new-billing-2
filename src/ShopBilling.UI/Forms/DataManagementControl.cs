@@ -43,16 +43,16 @@ namespace ShopBilling.UI.Forms
             // Header
             var lblTitle = new Label
             {
-                Text = "SQLite Database & System Data Management",
+                Text = "Purge Old Data & Delete Management",
                 Font = new Font("Segoe UI", 15f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(24, 43, 73),
+                ForeColor = Color.FromArgb(192, 57, 43),
                 Dock = DockStyle.Top,
                 Height = 35
             };
 
             var lblSubtitle = new Label
             {
-                Text = "Read-only database diagnostics, ACID integrity audits, record counts, and zero-data-loss vacuum optimization.",
+                Text = "Delete bills, payments, estimates, and invoices by selecting a custom Start Date and End Date range.",
                 Font = new Font("Segoe UI", 9.5f),
                 ForeColor = Color.FromArgb(100, 116, 139),
                 Dock = DockStyle.Top,

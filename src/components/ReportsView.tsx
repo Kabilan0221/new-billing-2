@@ -290,10 +290,64 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
     }
   }, [reportType, salesRows, prodSalesRows, purchaseRows, stockRows, customerRows, paymentRows]);
 
+  const currentReportMeta = useMemo(() => {
+    switch (reportType) {
+      case 'sales':
+        return {
+          title: 'Sales Invoices Register (Bill-Wise)',
+          subtitle: 'Invoice-level breakdown of billing transactions, tax, payment modes, and totals',
+          icon: TrendingUp,
+          count: salesRows.length,
+          countUnit: 'Invoices',
+        };
+      case 'product_sales':
+        return {
+          title: 'Product-Wise Sales & Revenue List',
+          subtitle: 'Itemized products movement, quantity sold, discount given, tax collected, and net revenue',
+          icon: Boxes,
+          count: prodSalesRows.length,
+          countUnit: 'Products',
+        };
+      case 'purchases':
+        return {
+          title: 'Purchases & Inbound Invoices Register',
+          subtitle: 'Vendor-wise purchase entries, invoiced amounts, payments made, and outstanding balance',
+          icon: ShoppingCart,
+          count: purchaseRows.length,
+          countUnit: 'Vouchers',
+        };
+      case 'stock':
+        return {
+          title: 'Current Stock Valuation & Inventory List',
+          subtitle: 'Stock catalog, in-hand quantity, reorder alerts, and valuation at cost vs selling price',
+          icon: Boxes,
+          count: stockRows.length,
+          countUnit: 'Items',
+        };
+      case 'customers':
+        return {
+          title: 'Customer Accounts & Outstanding Balances List',
+          subtitle: 'Customer ledger records, billing totals, payments received, and outstanding dues',
+          icon: Users,
+          count: customerRows.length,
+          countUnit: 'Customers',
+        };
+      case 'payments':
+      default:
+        return {
+          title: 'Payment Collections & Tender Log',
+          subtitle: 'Chronological receipts log with payment modes, reference numbers, and collected totals',
+          icon: CreditCard,
+          count: paymentRows.length,
+          countUnit: 'Receipts',
+        };
+    }
+  }, [reportType, salesRows.length, prodSalesRows.length, purchaseRows.length, stockRows.length, customerRows.length, paymentRows.length]);
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f0f2f5] select-none overflow-hidden">
       {/* Top Header & Report Navigation Tabs */}
-      <div className="bg-white border-b border-slate-200 px-6 py-3 shadow-xs">
+      <div className="bg-white border-b border-slate-200 px-6 py-3 shadow-xs shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2">
@@ -356,7 +410,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
         <div className="flex flex-wrap items-center gap-3">
           {/* Date Pickers */}
           <div className="flex items-center gap-1.5">
@@ -437,50 +491,77 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         </div>
       </div>
 
-      {/* Main Grid Content Area */}
-      <div className="flex-1 overflow-auto bg-white p-4">
+      {/* Distinct Report Section Heading Bar */}
+      <div className="bg-slate-50 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-2xs">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-blue-100 text-blue-700 rounded shadow-2xs">
+            <currentReportMeta.icon className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">
+                {currentReportMeta.title}
+              </h2>
+              <span className="px-2 py-0.5 bg-blue-100/80 border border-blue-200 text-blue-800 text-[11px] font-bold rounded-full">
+                {currentReportMeta.count} {currentReportMeta.countUnit}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              {currentReportMeta.subtitle}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-600">
+          <span className="bg-white border border-slate-200 rounded px-2.5 py-1 font-medium shadow-2xs">
+            Date Range: <strong className="text-slate-800">{fromDate}</strong> to <strong className="text-slate-800">{toDate}</strong>
+          </span>
+        </div>
+      </div>
+
+      {/* Main Grid Content Area with Clean Sticky Headers (No Overlap) */}
+      <div className="flex-1 overflow-auto bg-white">
         {reportType === 'sales' && (
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold sticky top-0">
-                <th className="py-2 px-3">Invoice #</th>
-                <th className="py-2 px-3">Date</th>
-                <th className="py-2 px-3">Customer</th>
-                <th className="py-2 px-3">Payment</th>
-                <th className="py-2 px-3 text-center">Items</th>
-                <th className="py-2 px-3 text-center">Qty</th>
-                <th className="py-2 px-3 text-right">Gross</th>
-                <th className="py-2 px-3 text-right">Discount</th>
-                <th className="py-2 px-3 text-right">Taxable</th>
-                <th className="py-2 px-3 text-right">GST</th>
-                <th className="py-2 px-3 text-right font-black">Grand Total</th>
+          <table className="min-w-[1150px] w-full text-left text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Invoice #</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Date</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Customer</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Payment</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Items</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Qty</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Gross</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Discount</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Taxable</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">GST</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-900 font-black py-2.5 px-3 border-b border-slate-300 whitespace-nowrap text-right">Grand Total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {salesRows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={11} className="py-12 text-center text-slate-400 font-medium">
                     No confirmed sales invoices found in the selected date range.
                   </td>
                 </tr>
               ) : (
                 salesRows.map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-semibold text-blue-700">{r.documentNumber}</td>
-                    <td className="py-2 px-3 text-slate-600">{r.documentDate.slice(0, 16).replace('T', ' ')}</td>
-                    <td className="py-2 px-3 text-slate-800">{r.customerName}</td>
-                    <td className="py-2 px-3">
+                  <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-blue-700 border-b border-r border-slate-100 whitespace-nowrap">{r.documentNumber}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.documentDate.slice(0, 16).replace('T', ' ')}</td>
+                    <td className="py-2.5 px-3 text-slate-800 font-medium border-b border-r border-slate-100 whitespace-nowrap">{r.customerName}</td>
+                    <td className="py-2.5 px-3 border-b border-r border-slate-100 whitespace-nowrap">
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 font-medium">
                         {r.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-center">{r.totalItems}</td>
-                    <td className="py-2 px-3 text-center">{r.totalQuantity}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">₹{r.grossAmount.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-amber-600">₹{r.discountAmount.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">₹{r.taxableAmount.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">₹{r.totalTax.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right font-bold text-slate-900">₹{r.grandTotal.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">{r.totalItems}</td>
+                    <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">{r.totalQuantity}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.grossAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-amber-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.discountAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.taxableAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalTax.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-900 border-b border-slate-100 whitespace-nowrap">₹{r.grandTotal.toFixed(2)}</td>
                   </tr>
                 ))
               )}
@@ -489,39 +570,39 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'product_sales' && (
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold sticky top-0">
-                <th className="py-2 px-3">Product Code</th>
-                <th className="py-2 px-3">Barcode</th>
-                <th className="py-2 px-3">Product Name</th>
-                <th className="py-2 px-3 text-center">Unit</th>
-                <th className="py-2 px-3 text-center">Qty Sold</th>
-                <th className="py-2 px-3 text-center">Bills Count</th>
-                <th className="py-2 px-3 text-right">Total Discount</th>
-                <th className="py-2 px-3 text-right">Total GST</th>
-                <th className="py-2 px-3 text-right font-black">Revenue (INR)</th>
+          <table className="min-w-[1150px] w-full text-left text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Product Code</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Barcode</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Product Name</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Unit</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Qty Sold</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Bills Count</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Total Discount</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Total GST</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-900 font-black py-2.5 px-3 border-b border-slate-300 whitespace-nowrap text-right">Revenue (INR)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {prodSalesRows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
                     No product sales transactions recorded for this period.
                   </td>
                 </tr>
               ) : (
                 prodSalesRows.map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-semibold text-slate-800">{r.productCode}</td>
-                    <td className="py-2 px-3 font-mono text-slate-600">{r.barcode}</td>
-                    <td className="py-2 px-3 font-medium text-slate-900">{r.productName}</td>
-                    <td className="py-2 px-3 text-center text-slate-600">{r.unit}</td>
-                    <td className="py-2 px-3 text-center font-bold text-blue-800">{r.quantitySold}</td>
-                    <td className="py-2 px-3 text-center">{r.billCount}</td>
-                    <td className="py-2 px-3 text-right text-amber-600">₹{r.totalDiscount.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">₹{r.totalTax.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right font-bold text-emerald-800">₹{r.totalRevenue.toFixed(2)}</td>
+                  <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-slate-800 border-b border-r border-slate-100 whitespace-nowrap">{r.productCode}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.barcode}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-900 border-b border-r border-slate-100 whitespace-nowrap">{r.productName}</td>
+                    <td className="py-2.5 px-3 text-center text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.unit}</td>
+                    <td className="py-2.5 px-3 text-center font-bold text-blue-800 border-b border-r border-slate-100 whitespace-nowrap">{r.quantitySold}</td>
+                    <td className="py-2.5 px-3 text-center text-slate-700 border-b border-r border-slate-100 whitespace-nowrap">{r.billCount}</td>
+                    <td className="py-2.5 px-3 text-right text-amber-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalDiscount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalTax.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-800 border-b border-slate-100 whitespace-nowrap">₹{r.totalRevenue.toFixed(2)}</td>
                   </tr>
                 ))
               )}
@@ -530,43 +611,43 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'purchases' && (
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold sticky top-0">
-                <th className="py-2 px-3">Purchase #</th>
-                <th className="py-2 px-3">Date</th>
-                <th className="py-2 px-3">Supplier Name</th>
-                <th className="py-2 px-3">Supplier Bill #</th>
-                <th className="py-2 px-3 text-center">Type</th>
-                <th className="py-2 px-3 text-center">Qty</th>
-                <th className="py-2 px-3 text-right">Taxable</th>
-                <th className="py-2 px-3 text-right">Tax</th>
-                <th className="py-2 px-3 text-right font-bold">Grand Total</th>
-                <th className="py-2 px-3 text-right">Amount Paid</th>
-                <th className="py-2 px-3 text-right text-rose-700 font-bold">Balance Due</th>
+          <table className="min-w-[1200px] w-full text-left text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Purchase #</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Date</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Supplier Name</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Supplier Bill #</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Type</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Qty</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Taxable</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Tax</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Grand Total</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Amount Paid</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-rose-700 font-bold py-2.5 px-3 border-b border-slate-300 whitespace-nowrap text-right">Balance Due</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {purchaseRows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={11} className="py-12 text-center text-slate-400 font-medium">
                     No confirmed purchase entries found.
                   </td>
                 </tr>
               ) : (
                 purchaseRows.map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-semibold text-purple-700">{r.purchaseNumber}</td>
-                    <td className="py-2 px-3 text-slate-600">{r.purchaseDate.slice(0, 10)}</td>
-                    <td className="py-2 px-3 text-slate-900 font-medium">{r.supplierName}</td>
-                    <td className="py-2 px-3 text-slate-600">{r.supplierInvoiceNumber || '-'}</td>
-                    <td className="py-2 px-3 text-center">{r.paymentType}</td>
-                    <td className="py-2 px-3 text-center">{r.totalQuantity}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">₹{r.taxableAmount.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">₹{r.taxAmount.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right font-bold text-slate-900">₹{r.grandTotal.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-emerald-700">₹{r.amountPaid.toFixed(2)}</td>
-                    <td className="py-2 px-3 text-right text-rose-700 font-bold">₹{r.balanceDue.toFixed(2)}</td>
+                  <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-purple-700 border-b border-r border-slate-100 whitespace-nowrap">{r.purchaseNumber}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.purchaseDate.slice(0, 10)}</td>
+                    <td className="py-2.5 px-3 text-slate-900 font-medium border-b border-r border-slate-100 whitespace-nowrap">{r.supplierName}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.supplierInvoiceNumber || '-'}</td>
+                    <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">{r.paymentType}</td>
+                    <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">{r.totalQuantity}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.taxableAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.taxAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-900 border-b border-r border-slate-100 whitespace-nowrap">₹{r.grandTotal.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-emerald-700 border-b border-r border-slate-100 whitespace-nowrap">₹{r.amountPaid.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-rose-700 font-bold border-b border-slate-100 whitespace-nowrap">₹{r.balanceDue.toFixed(2)}</td>
                   </tr>
                 ))
               )}
@@ -575,121 +656,137 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'stock' && (
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold sticky top-0">
-                <th className="py-2 px-3">Product Code</th>
-                <th className="py-2 px-3">Barcode</th>
-                <th className="py-2 px-3">Product Name</th>
-                <th className="py-2 px-3">Category</th>
-                <th className="py-2 px-3 text-center">In-Hand Stock</th>
-                <th className="py-2 px-3 text-center">Status</th>
-                <th className="py-2 px-3 text-right">Cost Price</th>
-                <th className="py-2 px-3 text-right">Sale Price</th>
-                <th className="py-2 px-3 text-right font-bold">Valuation @ Cost</th>
-                <th className="py-2 px-3 text-right font-bold">Valuation @ Sale</th>
+          <table className="min-w-[1250px] w-full text-left text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Product Code</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Barcode</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Product Name</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Category</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">In-Hand Stock</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Status</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Cost Price</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Sale Price</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Valuation @ Cost</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-900 font-black py-2.5 px-3 border-b border-slate-300 whitespace-nowrap text-right">Valuation @ Sale</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {stockRows.map((r, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="py-2 px-3 font-semibold text-slate-800">{r.productCode}</td>
-                  <td className="py-2 px-3 font-mono text-slate-600">{r.barcode}</td>
-                  <td className="py-2 px-3 font-medium text-slate-900">{r.productName}</td>
-                  <td className="py-2 px-3 text-slate-600">{r.categoryName}</td>
-                  <td className="py-2 px-3 text-center font-bold text-slate-900">
-                    {r.currentStock} {r.unit}
+            <tbody>
+              {stockRows.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-400 font-medium">
+                    No inventory products found matching the criteria.
                   </td>
-                  <td className="py-2 px-3 text-center">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        r.stockStatus === 'Out of Stock'
-                          ? 'bg-rose-100 text-rose-800'
-                          : r.stockStatus === 'Low Stock'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}
-                    >
-                      {r.stockStatus}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 text-right text-slate-600">₹{r.purchaseRate.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right text-slate-600">₹{r.saleRate.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right font-bold text-blue-900">₹{r.stockValueAtCost.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right font-bold text-emerald-900">₹{r.stockValueAtSale.toFixed(2)}</td>
                 </tr>
-              ))}
+              ) : (
+                stockRows.map((r, i) => (
+                  <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-slate-800 border-b border-r border-slate-100 whitespace-nowrap">{r.productCode}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.barcode}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-900 border-b border-r border-slate-100 whitespace-nowrap">{r.productName}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.categoryName}</td>
+                    <td className="py-2.5 px-3 text-center font-bold text-slate-900 border-b border-r border-slate-100 whitespace-nowrap">
+                      {r.currentStock} {r.unit}
+                    </td>
+                    <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          r.stockStatus === 'Out of Stock'
+                            ? 'bg-rose-100 text-rose-800'
+                            : r.stockStatus === 'Low Stock'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {r.stockStatus}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.purchaseRate.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.saleRate.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-blue-900 border-b border-r border-slate-100 whitespace-nowrap">₹{r.stockValueAtCost.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-900 border-b border-slate-100 whitespace-nowrap">₹{r.stockValueAtSale.toFixed(2)}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
 
         {reportType === 'customers' && (
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold sticky top-0">
-                <th className="py-2 px-3">Code</th>
-                <th className="py-2 px-3">Customer Name</th>
-                <th className="py-2 px-3">Mobile</th>
-                <th className="py-2 px-3">GSTIN</th>
-                <th className="py-2 px-3 text-center">Invoices</th>
-                <th className="py-2 px-3 text-right">Total Billed</th>
-                <th className="py-2 px-3 text-right">Total Paid</th>
-                <th className="py-2 px-3 text-right text-rose-700 font-bold">Outstanding Balance</th>
+          <table className="min-w-[1100px] w-full text-left text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Code</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Customer Name</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Mobile</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">GSTIN</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Invoices</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Total Billed</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Total Paid</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-rose-700 font-bold py-2.5 px-3 border-b border-slate-300 whitespace-nowrap text-right">Outstanding Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {customerRows.map((r, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="py-2 px-3 font-semibold text-indigo-700">{r.customerCode}</td>
-                  <td className="py-2 px-3 font-medium text-slate-900">{r.customerName}</td>
-                  <td className="py-2 px-3 text-slate-600">{r.mobile || '-'}</td>
-                  <td className="py-2 px-3 text-slate-600 font-mono">{r.gstin || '-'}</td>
-                  <td className="py-2 px-3 text-center">{r.invoicesCount}</td>
-                  <td className="py-2 px-3 text-right text-slate-600">₹{r.totalBilledAmount.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right text-emerald-700">₹{r.totalPaidAmount.toFixed(2)}</td>
-                  <td className="py-2 px-3 text-right font-bold text-rose-700">
-                    ₹{r.outstandingBalance.toFixed(2)}
+            <tbody>
+              {customerRows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                    No customer accounts found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                customerRows.map((r, i) => (
+                  <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-indigo-700 border-b border-r border-slate-100 whitespace-nowrap">{r.customerCode}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-900 border-b border-r border-slate-100 whitespace-nowrap">{r.customerName}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.mobile || '-'}</td>
+                    <td className="py-2.5 px-3 text-slate-600 font-mono border-b border-r border-slate-100 whitespace-nowrap">{r.gstin || '-'}</td>
+                    <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">{r.invoicesCount}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalBilledAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right text-emerald-700 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalPaidAmount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-rose-700 border-b border-slate-100 whitespace-nowrap">
+                      ₹{r.outstandingBalance.toFixed(2)}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         )}
 
         {reportType === 'payments' && (
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold sticky top-0">
-                <th className="py-2 px-3">Receipt ID</th>
-                <th className="py-2 px-3">Payment Date</th>
-                <th className="py-2 px-3">Invoice #</th>
-                <th className="py-2 px-3">Customer</th>
-                <th className="py-2 px-3">Tender Mode</th>
-                <th className="py-2 px-3">Reference / UTR</th>
-                <th className="py-2 px-3 text-right font-bold">Amount Collected</th>
+          <table className="min-w-[1000px] w-full text-left text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Receipt ID</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Payment Date</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Invoice #</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Customer</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Tender Mode</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Reference / UTR</th>
+                <th className="sticky top-0 z-20 bg-slate-100 text-slate-900 font-black py-2.5 px-3 border-b border-slate-300 whitespace-nowrap text-right">Amount Collected</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {paymentRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
                     No payment receipts found in selected range.
                   </td>
                 </tr>
               ) : (
                 paymentRows.map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-mono text-slate-600">#{r.paymentId}</td>
-                    <td className="py-2 px-3 text-slate-600">{r.paymentDate.slice(0, 16).replace('T', ' ')}</td>
-                    <td className="py-2 px-3 font-semibold text-blue-700">{r.invoiceNumber}</td>
-                    <td className="py-2 px-3 text-slate-900">{r.customerName}</td>
-                    <td className="py-2 px-3">
+                  <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">#{r.paymentId}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.paymentDate.slice(0, 16).replace('T', ' ')}</td>
+                    <td className="py-2.5 px-3 font-semibold text-blue-700 border-b border-r border-slate-100 whitespace-nowrap">{r.invoiceNumber}</td>
+                    <td className="py-2.5 px-3 text-slate-900 font-medium border-b border-r border-slate-100 whitespace-nowrap">{r.customerName}</td>
+                    <td className="py-2.5 px-3 border-b border-r border-slate-100 whitespace-nowrap">
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-800 font-bold">
                         {r.paymentMode}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-slate-600">{r.referenceNumber || '-'}</td>
-                    <td className="py-2 px-3 text-right font-bold text-emerald-800">₹{r.amount.toFixed(2)}</td>
+                    <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.referenceNumber || '-'}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-800 border-b border-slate-100 whitespace-nowrap">₹{r.amount.toFixed(2)}</td>
                   </tr>
                 ))
               )}

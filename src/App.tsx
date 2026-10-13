@@ -8,7 +8,6 @@ import { CategoryBrandDialog } from './components/CategoryBrandDialog';
 import { ExcelDialog } from './components/ExcelDialog';
 import { BarcodeDialog } from './components/BarcodeDialog';
 import { SolutionExplorer } from './components/SolutionExplorer';
-import { BackupRestoreView } from './components/BackupRestoreView';
 import { PosBilling } from './components/PosBilling';
 import { ModulePlaceholderView } from './components/ModulePlaceholderView';
 import { SupplierManagement } from './components/SupplierManagement';
@@ -75,10 +74,7 @@ export default function App() {
       } else if (e.key === 'F4') {
         e.preventDefault();
         setActiveNav('barcode');
-      } else if (e.key === 'F5') {
-        e.preventDefault();
-        setActiveNav('payments');
-      } else if (e.key === 'F6') {
+      } else if (e.key === 'F5' || e.key === 'F6') {
         e.preventDefault();
         setActiveNav('history');
       } else if (e.key === 'F7') {
@@ -288,20 +284,9 @@ export default function App() {
                 <ReportsView onRefreshData={refreshData} />
               )}
 
-              {activeNav === 'data' && <DataManagementView />}
+              {activeNav === 'data' && <DataManagementView onRefreshData={refreshData} />}
 
               {activeNav === 'settings' && <SettingsView />}
-
-              {activeNav === 'payments' && (
-                <PosBilling
-                  onRefreshData={refreshData}
-                  onNavigateToProducts={() => setActiveNav('products')}
-                  onNavigateToStock={() => setActiveNav('stock')}
-                  initialActiveSubTab="history"
-                />
-              )}
-
-              {activeNav === 'backup' && <BackupRestoreView />}
 
               {activeNav !== 'products' &&
                 activeNav !== 'inbound' &&
@@ -316,7 +301,6 @@ export default function App() {
                 activeNav !== 'reports' &&
                 activeNav !== 'data' &&
                 activeNav !== 'settings' &&
-                activeNav !== 'payments' &&
                 activeNav !== 'backup' && (
                   <ModulePlaceholderView
                     title={SIDEBAR_ITEMS.find((s) => s.key === activeNav)?.label || 'Module'}

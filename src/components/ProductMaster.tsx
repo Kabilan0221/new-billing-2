@@ -16,6 +16,7 @@ import {
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
+  Boxes,
 } from 'lucide-react';
 import { Product, ProductFilter, PagedResult } from '../types';
 import { db } from '../services/dbEngine';
@@ -128,6 +129,26 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f0f3f6] overflow-hidden text-slate-800">
+      {/* 0. Module Header Banner */}
+      <div className="bg-[#182b49] text-white px-4 py-2 border-b border-[#0f1d33] flex flex-wrap items-center justify-between shrink-0 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded bg-blue-600/30 border border-blue-400/40 flex items-center justify-center">
+            <Boxes className="w-4 h-4 text-blue-300" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold tracking-wide flex items-center gap-2">
+              <span>PRODUCT MASTER & CATALOG DIRECTORY (F2)</span>
+              <span className="text-[10px] bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.2 rounded font-mono">
+                {queryResult.totalCount.toLocaleString()} Listed
+              </span>
+            </h1>
+            <p className="text-[11px] text-slate-300">
+              Manage master inventory items, dual-language product names, pricing, and live barcode labels without overlap.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Top Action Toolbar */}
       <div className="bg-white border-b border-slate-200 px-3 py-2 flex flex-wrap items-center gap-1.5 shadow-2xs">
         <button
@@ -350,25 +371,25 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
 
       {/* 4. Product Data Grid */}
       <div className="flex-1 overflow-auto bg-white border-b border-slate-200">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead className="bg-[#1f4e79] text-white sticky top-0 z-10 select-none">
+        <table className="min-w-[1250px] w-full text-left border-separate border-spacing-0 text-xs">
+          <thead className="sticky top-0 z-20 select-none shadow-xs">
             <tr>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] w-14">Code</th>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] w-28">Barcode</th>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] min-w-[180px]">Product Name (English)</th>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] min-w-[160px]">Tamil Name (தமிழ்)</th>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] w-28">Category</th>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] w-24">Brand</th>
-              <th className="py-2 px-2 font-semibold border-r border-[#153a5e] text-right w-16">Pur. ₹</th>
-              <th className="py-2 px-2 font-bold border-r border-[#153a5e] text-right w-20 bg-[#163c61]">Sale ₹</th>
-              <th className="py-2 px-2 font-semibold border-r border-[#153a5e] text-right w-16">MRP ₹</th>
-              <th className="py-2 px-1.5 font-semibold border-r border-[#153a5e] text-center w-12">Tax%</th>
-              <th className="py-2 px-2.5 font-semibold border-r border-[#153a5e] text-right w-20">Stock</th>
-              <th className="py-2 px-2 font-semibold border-r border-[#153a5e] text-right w-14">Reorder</th>
-              <th className="py-2 px-2 font-semibold text-center w-16">Status</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] w-14 whitespace-nowrap">Code</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] w-28 whitespace-nowrap">Barcode</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] min-w-[190px] whitespace-nowrap">Product Name (English)</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] min-w-[170px] whitespace-nowrap">Tamil Name (தமிழ்)</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] w-28 whitespace-nowrap">Category</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] w-24 whitespace-nowrap">Brand</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2 font-semibold border-b border-r border-[#153a5e] text-right w-16 whitespace-nowrap">Pur. ₹</th>
+              <th className="sticky top-0 z-20 bg-[#163c61] text-white py-2 px-2 font-bold border-b border-r border-[#153a5e] text-right w-20 whitespace-nowrap">Sale ₹</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2 font-semibold border-b border-r border-[#153a5e] text-right w-16 whitespace-nowrap">MRP ₹</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-1.5 font-semibold border-b border-r border-[#153a5e] text-center w-12 whitespace-nowrap">Tax%</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2.5 font-semibold border-b border-r border-[#153a5e] text-right w-20 whitespace-nowrap">Stock</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2 font-semibold border-b border-r border-[#153a5e] text-right w-14 whitespace-nowrap">Reorder</th>
+              <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-2 font-semibold border-b border-[#153a5e] text-center w-16 whitespace-nowrap">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 font-normal">
+          <tbody className="font-normal bg-white">
             {queryResult.items.length === 0 ? (
               <tr>
                 <td colSpan={13} className="py-12 text-center text-slate-400">
@@ -393,47 +414,47 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
                         : 'hover:bg-slate-50'
                     }`}
                   >
-                    <td className="py-1.5 px-2.5 font-mono text-[11px] text-slate-600 border-r border-slate-100">
+                    <td className="py-1.5 px-2.5 font-mono text-[11px] text-slate-600 border-b border-r border-slate-200">
                       {p.productCode}
                     </td>
-                    <td className="py-1.5 px-2.5 font-mono text-[11px] border-r border-slate-100">
+                    <td className="py-1.5 px-2.5 font-mono text-[11px] border-b border-r border-slate-200">
                       {p.barcode}
                     </td>
-                    <td className="py-1.5 px-2.5 font-medium border-r border-slate-100 truncate max-w-[220px]">
+                    <td className="py-1.5 px-2.5 font-medium border-b border-r border-slate-200 truncate max-w-[220px]">
                       {p.nameEn}
                     </td>
-                    <td className="py-1.5 px-2.5 text-slate-700 font-sans border-r border-slate-100 truncate max-w-[200px]">
+                    <td className="py-1.5 px-2.5 text-slate-700 font-sans border-b border-r border-slate-200 truncate max-w-[200px]">
                       {p.nameTa || '—'}
                     </td>
-                    <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-100 truncate">
+                    <td className="py-1.5 px-2.5 text-slate-600 border-b border-r border-slate-200 truncate">
                       {p.categoryName || '—'}
                     </td>
-                    <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-100 truncate">
+                    <td className="py-1.5 px-2.5 text-slate-600 border-b border-r border-slate-200 truncate">
                       {p.brandName || '—'}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono tabular-nums border-r border-slate-100 text-slate-600">
+                    <td className="py-1.5 px-2 text-right font-mono tabular-nums border-b border-r border-slate-200 text-slate-600">
                       ₹{p.purchaseRate.toFixed(2)}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono font-semibold tabular-nums border-r border-slate-100 text-slate-900 bg-slate-50/50">
+                    <td className="py-1.5 px-2 text-right font-mono font-semibold tabular-nums border-b border-r border-slate-200 text-slate-900 bg-slate-50/50">
                       ₹{p.saleRate.toFixed(2)}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono tabular-nums border-r border-slate-100 text-slate-600">
+                    <td className="py-1.5 px-2 text-right font-mono tabular-nums border-b border-r border-slate-200 text-slate-600">
                       ₹{p.mrp.toFixed(2)}
                     </td>
-                    <td className="py-1.5 px-1.5 text-center font-mono tabular-nums border-r border-slate-100">
+                    <td className="py-1.5 px-1.5 text-center font-mono tabular-nums border-b border-r border-slate-200">
                       {p.taxRate}%
                     </td>
                     <td
-                      className={`py-1.5 px-2.5 text-right font-mono font-bold tabular-nums border-r border-slate-100 ${
+                      className={`py-1.5 px-2.5 text-right font-mono font-bold tabular-nums border-b border-r border-slate-200 ${
                         isLowStock ? 'text-rose-600 bg-rose-50' : 'text-slate-800'
                       }`}
                     >
                       {p.currentStock} {p.unit}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono tabular-nums border-r border-slate-100 text-slate-500">
+                    <td className="py-1.5 px-2 text-right font-mono tabular-nums border-b border-r border-slate-200 text-slate-500">
                       {p.reorderLevel}
                     </td>
-                    <td className="py-1.5 px-2 text-center">
+                    <td className="py-1.5 px-2 text-center border-b border-slate-200">
                       <span
                         className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-medium ${
                           p.isActive

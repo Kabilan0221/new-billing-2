@@ -424,6 +424,7 @@ export interface InvoiceFilter {
   customerId?: number;
   status?: string;
   paymentStatus?: string;
+  paymentMethod?: string;
   fromDate?: string;
   toDate?: string;
   pageNumber?: number;

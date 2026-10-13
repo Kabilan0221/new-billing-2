@@ -32,7 +32,8 @@ import {
   ChevronRight,
   HelpCircle,
   FileClock,
-  UserPlus
+  UserPlus,
+  Edit,
 } from 'lucide-react';
 import { db } from '../services/dbEngine';
 import {
@@ -59,6 +60,12 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   initialActiveSubTab = 'pos',
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'pos' | 'history' | 'customers' | 'gst'>(initialActiveSubTab);
+
+  useEffect(() => {
+    if (initialActiveSubTab) {
+      setActiveSubTab(initialActiveSubTab);
+    }
+  }, [initialActiveSubTab]);
 
   // Reference data
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -91,6 +98,18 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQty, setSearchQty] = useState(1);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close search popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // UI Feedback / Alerts
   const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error' | 'warning'; text: string } | null>(null);
@@ -118,6 +137,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   const [historySearch, setHistorySearch] = useState('');
   const [historyStatus, setHistoryStatus] = useState<string>('All');
   const [historyPayStatus, setHistoryPayStatus] = useState<string>('All');
+  const [historyPayMethod, setHistoryPayMethod] = useState<string>('All');
   const [historyFromDate, setHistoryFromDate] = useState('');
   const [historyToDate, setHistoryToDate] = useState('');
   const [historyPage, setHistoryPage] = useState(1);
@@ -127,6 +147,31 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     totalCount: number;
     totalPages: number;
   }>({ items: [], totalCount: 0, totalPages: 1 });
+
+  // Edit Bill Modal State
+  const [editBillInvoice, setEditBillInvoice] = useState<InvoiceHeader | null>(null);
+  const [editBillDate, setEditBillDate] = useState<string>('');
+  const [editBillCustomerId, setEditBillCustomerId] = useState<number>(1);
+  const [editBillCustomerName, setEditBillCustomerName] = useState<string>('');
+  const [editBillCustomerMobile, setEditBillCustomerMobile] = useState<string>('');
+  const [editBillCustomerGstin, setEditBillCustomerGstin] = useState<string>('');
+  const [editBillNotes, setEditBillNotes] = useState<string>('');
+  const [editBillDiscount, setEditBillDiscount] = useState<number>(0);
+  const [editBillOtherCharges, setEditBillOtherCharges] = useState<number>(0);
+  const [editBillItems, setEditBillItems] = useState<InvoiceItem[]>([]);
+  const [editBillPaymentMethod, setEditBillPaymentMethod] = useState<'Cash' | 'UPI' | 'Card' | 'Bank Transfer' | 'Credit'>('Cash');
+  const [editBillAmountPaid, setEditBillAmountPaid] = useState<number>(0);
+  const [editBillRefNumber, setEditBillRefNumber] = useState<string>('');
+  const [editBillAddProductId, setEditBillAddProductId] = useState<string>('');
+  const [editBillError, setEditBillError] = useState<string>('');
+
+  // Edit Payment Modal State
+  const [editPaymentInvoice, setEditPaymentInvoice] = useState<InvoiceHeader | null>(null);
+  const [editPayMethod, setEditPayMethod] = useState<'Cash' | 'UPI' | 'Card' | 'Bank Transfer' | 'Credit'>('Cash');
+  const [editPayAmount, setEditPayAmount] = useState<number>(0);
+  const [editPayRefNumber, setEditPayRefNumber] = useState<string>('');
+  const [editPayNotes, setEditPayNotes] = useState<string>('');
+  const [editPayError, setEditPayError] = useState<string>('');
 
   // Initial Data Load
   const reloadData = () => {
@@ -167,6 +212,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       searchTerm: historySearch,
       status: historyStatus,
       paymentStatus: historyPayStatus,
+      paymentMethod: historyPayMethod,
       fromDate: historyFromDate || undefined,
       toDate: historyToDate || undefined,
       pageNumber: historyPage,
@@ -182,7 +228,274 @@ export const PosBilling: React.FC<PosBillingProps> = ({
 
   useEffect(() => {
     loadHistory();
-  }, [historySearch, historyStatus, historyPayStatus, historyFromDate, historyToDate, historyPage, historyPageSize]);
+  }, [historySearch, historyStatus, historyPayStatus, historyPayMethod, historyFromDate, historyToDate, historyPage, historyPageSize]);
+
+  // Handlers for Editing Bill & Payment
+  const handleOpenEditBill = (inv: InvoiceHeader) => {
+    setEditBillInvoice(inv);
+    setEditBillDate(inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 16) : '');
+    setEditBillCustomerId(inv.customerId || 1);
+    setEditBillCustomerName(inv.customerName || '');
+    setEditBillCustomerMobile(inv.customerMobile || '');
+    setEditBillCustomerGstin(inv.customerGstin || '');
+    setEditBillNotes(inv.notes || '');
+    setEditBillDiscount(inv.billDiscount || 0);
+    setEditBillOtherCharges(inv.otherCharges || 0);
+    setEditBillItems(JSON.parse(JSON.stringify(inv.items || [])));
+    const primaryPay = inv.payments?.[0];
+    setEditBillPaymentMethod((primaryPay?.paymentMethod as any) || (inv.paymentMode as any) || 'Cash');
+    setEditBillAmountPaid(inv.amountPaid !== undefined ? inv.amountPaid : inv.grandTotal);
+    setEditBillRefNumber(primaryPay?.referenceNumber || '');
+    setEditBillAddProductId('');
+    setEditBillError('');
+  };
+
+  const handleUpdateEditBillItemQty = (index: number, newQty: number) => {
+    const qty = Math.max(1, newQty || 1);
+    setEditBillItems((prev) => {
+      const next = [...prev];
+      const it = { ...next[index] };
+      it.quantity = qty;
+      const gross = it.quantity * it.rate;
+      it.discountAmount = Math.round(((gross * it.discountPercent) / 100) * 100) / 100;
+      it.taxableAmount = Math.max(0, gross - it.discountAmount);
+      if (it.taxRate > 0) {
+        it.taxAmount = Math.round(((it.taxableAmount * it.taxRate) / 100) * 100) / 100;
+        it.cgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+        it.sgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+      } else {
+        it.taxAmount = 0;
+        it.cgstAmount = 0;
+        it.sgstAmount = 0;
+      }
+      it.lineTotal = Math.round((it.taxableAmount + it.taxAmount) * 100) / 100;
+      next[index] = it;
+      return next;
+    });
+  };
+
+  const handleUpdateEditBillItemRate = (index: number, newRate: number) => {
+    const rate = Math.max(0, newRate || 0);
+    setEditBillItems((prev) => {
+      const next = [...prev];
+      const it = { ...next[index] };
+      it.rate = rate;
+      const gross = it.quantity * it.rate;
+      it.discountAmount = Math.round(((gross * it.discountPercent) / 100) * 100) / 100;
+      it.taxableAmount = Math.max(0, gross - it.discountAmount);
+      if (it.taxRate > 0) {
+        it.taxAmount = Math.round(((it.taxableAmount * it.taxRate) / 100) * 100) / 100;
+        it.cgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+        it.sgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+      } else {
+        it.taxAmount = 0;
+        it.cgstAmount = 0;
+        it.sgstAmount = 0;
+      }
+      it.lineTotal = Math.round((it.taxableAmount + it.taxAmount) * 100) / 100;
+      next[index] = it;
+      return next;
+    });
+  };
+
+  const handleUpdateEditBillItemDisc = (index: number, newDisc: number) => {
+    const disc = Math.min(100, Math.max(0, newDisc || 0));
+    setEditBillItems((prev) => {
+      const next = [...prev];
+      const it = { ...next[index] };
+      it.discountPercent = disc;
+      const gross = it.quantity * it.rate;
+      it.discountAmount = Math.round(((gross * it.discountPercent) / 100) * 100) / 100;
+      it.taxableAmount = Math.max(0, gross - it.discountAmount);
+      if (it.taxRate > 0) {
+        it.taxAmount = Math.round(((it.taxableAmount * it.taxRate) / 100) * 100) / 100;
+        it.cgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+        it.sgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+      } else {
+        it.taxAmount = 0;
+        it.cgstAmount = 0;
+        it.sgstAmount = 0;
+      }
+      it.lineTotal = Math.round((it.taxableAmount + it.taxAmount) * 100) / 100;
+      next[index] = it;
+      return next;
+    });
+  };
+
+  const handleRemoveEditBillItem = (index: number) => {
+    setEditBillItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddProductToEditBill = (prod: Product) => {
+    const existingIdx = editBillItems.findIndex((it) => it.productId === prod.id);
+    if (existingIdx !== -1) {
+      handleUpdateEditBillItemQty(existingIdx, editBillItems[existingIdx].quantity + 1);
+      return;
+    }
+    const qty = 1;
+    const rate = prod.saleRate;
+    const gross = qty * rate;
+    const taxRate = prod.taxRate || 0;
+    let taxAmount = 0;
+    let cgstAmount = 0;
+    let sgstAmount = 0;
+    if (taxRate > 0) {
+      taxAmount = Math.round(((gross * taxRate) / 100) * 100) / 100;
+      cgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+      sgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+    }
+    const newItem: InvoiceItem = {
+      productId: prod.id,
+      productCode: prod.productCode,
+      barcode: prod.barcode,
+      productName: prod.nameEn,
+      unit: prod.unit,
+      quantity: qty,
+      rate,
+      discountPercent: 0,
+      discountAmount: 0,
+      taxRate,
+      taxableAmount: gross,
+      cgstRate: taxRate / 2,
+      cgstAmount,
+      sgstRate: taxRate / 2,
+      sgstAmount,
+      igstRate: 0,
+      igstAmount: 0,
+      taxAmount,
+      lineTotal: Math.round((gross + taxAmount) * 100) / 100,
+    };
+    setEditBillItems((prev) => [...prev, newItem]);
+  };
+
+  const editBillCalculated = useMemo(() => {
+    if (!editBillInvoice) return null;
+    return db.calculateInvoice({
+      ...editBillInvoice,
+      customerId: editBillCustomerId,
+      customerName: editBillCustomerName,
+      customerMobile: editBillCustomerMobile,
+      customerGstin: editBillCustomerGstin,
+      billDiscount: editBillDiscount,
+      otherCharges: editBillOtherCharges,
+      items: editBillItems,
+      payments: [
+        {
+          paymentMethod: editBillPaymentMethod,
+          amount: editBillAmountPaid,
+          referenceNumber: editBillRefNumber,
+        },
+      ],
+    });
+  }, [
+    editBillInvoice,
+    editBillCustomerId,
+    editBillCustomerName,
+    editBillCustomerMobile,
+    editBillCustomerGstin,
+    editBillDiscount,
+    editBillOtherCharges,
+    editBillItems,
+    editBillPaymentMethod,
+    editBillAmountPaid,
+    editBillRefNumber,
+  ]);
+
+  const handleSaveEditBill = () => {
+    if (!editBillInvoice) return;
+    if (editBillItems.length === 0) {
+      setEditBillError('Invoice must contain at least one product item.');
+      return;
+    }
+
+    const payments: InvoicePayment[] = [
+      {
+        invoiceId: editBillInvoice.id,
+        invoiceNumber: editBillInvoice.invoiceNumber,
+        paymentMethod: editBillPaymentMethod,
+        amount: editBillAmountPaid,
+        referenceNumber:
+          editBillRefNumber ||
+          (editBillPaymentMethod === 'Cash' ? 'CASH-COUNTER' : `REF-${Date.now().toString().slice(-6)}`),
+        paymentDate: new Date().toISOString(),
+      },
+    ];
+
+    const result = db.updateInvoice({
+      id: editBillInvoice.id,
+      invoiceDate: editBillDate ? new Date(editBillDate).toISOString() : editBillInvoice.invoiceDate,
+      customerId: editBillCustomerId,
+      customerName: editBillCustomerName,
+      customerMobile: editBillCustomerMobile,
+      customerGstin: editBillCustomerGstin,
+      notes: editBillNotes,
+      billDiscount: editBillDiscount,
+      otherCharges: editBillOtherCharges,
+      items: editBillItems,
+      payments,
+    });
+
+    if (!result.success) {
+      setEditBillError(result.errors.join(' '));
+      return;
+    }
+
+    setAlertMessage({
+      type: 'success',
+      text: `Bill #${editBillInvoice.invoiceNumber} updated successfully! Total: ₹${result.invoice?.grandTotal.toFixed(2)}, Payment Method: ${result.invoice?.paymentMode} (${result.invoice?.paymentStatus}).`,
+    });
+    setTimeout(() => setAlertMessage(null), 4000);
+
+    setEditBillInvoice(null);
+    loadHistory();
+    reloadData();
+    if (onRefreshData) onRefreshData();
+  };
+
+  const handleOpenEditPayment = (inv: InvoiceHeader) => {
+    setEditPaymentInvoice(inv);
+    const primaryPay = inv.payments?.[0];
+    setEditPayMethod((primaryPay?.paymentMethod as any) || (inv.paymentMode as any) || 'Cash');
+    setEditPayAmount(inv.amountPaid !== undefined ? inv.amountPaid : inv.grandTotal);
+    setEditPayRefNumber(primaryPay?.referenceNumber || '');
+    setEditPayNotes(inv.notes || '');
+    setEditPayError('');
+  };
+
+  const handleSaveEditPayment = () => {
+    if (!editPaymentInvoice) return;
+
+    const payments: InvoicePayment[] = [
+      {
+        invoiceId: editPaymentInvoice.id,
+        invoiceNumber: editPaymentInvoice.invoiceNumber,
+        paymentMethod: editPayMethod,
+        amount: Number(editPayAmount) || 0,
+        referenceNumber:
+          editPayRefNumber ||
+          (editPayMethod === 'Cash' ? 'CASH-COUNTER' : `REF-${Date.now().toString().slice(-6)}`),
+        notes: editPayNotes,
+        paymentDate: new Date().toISOString(),
+      },
+    ];
+
+    const result = db.updateInvoicePayment(editPaymentInvoice.id, payments, editPayNotes);
+    if (!result.success) {
+      setEditPayError(result.errors.join(' '));
+      return;
+    }
+
+    setAlertMessage({
+      type: 'success',
+      text: `Payment updated for Bill #${editPaymentInvoice.invoiceNumber}! Method: ${result.invoice?.paymentMode}, Paid: ₹${result.invoice?.amountPaid.toFixed(2)}, Status: ${result.invoice?.paymentStatus}.`,
+    });
+    setTimeout(() => setAlertMessage(null), 4000);
+
+    setEditPaymentInvoice(null);
+    loadHistory();
+    reloadData();
+    if (onRefreshData) onRefreshData();
+  };
 
   // Selected customer object
   const selectedCustomer = useMemo(() => {
@@ -567,6 +880,8 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       'Total Tax (₹)': inv.totalTaxAmount,
       'Round Off (₹)': inv.roundOff,
       'Grand Total (₹)': inv.grandTotal,
+      'Payment Method': inv.payments?.map((p) => p.paymentMethod).filter(Boolean).join(', ') || inv.paymentMode || 'Cash',
+      'Payment Reference': inv.payments?.map((p) => p.referenceNumber).filter(Boolean).join(', ') || '',
       'Amount Paid (₹)': inv.amountPaid,
       'Balance Due (₹)': inv.balanceDue,
       'Payment Status': inv.paymentStatus,
@@ -805,7 +1120,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
               </form>
 
               {/* 2. Manual Product Search Dropdown */}
-              <div className="flex-1 relative">
+              <div className="flex-1 relative" ref={searchContainerRef}>
                 <div className="relative">
                   <input
                     type="text"
@@ -875,21 +1190,21 @@ export const PosBilling: React.FC<PosBillingProps> = ({
 
             {/* Cart Items Table */}
             <div className="flex-1 overflow-auto bg-slate-50">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#1f4e79] text-white sticky top-0 font-semibold shadow-2xs z-10">
+              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[900px]">
+                <thead className="sticky top-0 z-20 shadow-xs">
                   <tr>
-                    <th className="p-2 w-8 text-center">#</th>
-                    <th className="p-2 w-28">Barcode / SKU</th>
-                    <th className="p-2">Item Description</th>
-                    <th className="p-2 text-center w-24">Qty</th>
-                    <th className="p-2 w-14 text-center">Unit</th>
-                    <th className="p-2 text-right w-20">Rate (₹)</th>
-                    <th className="p-2 text-center w-16">Disc %</th>
-                    <th className="p-2 text-right w-20">Taxable (₹)</th>
-                    <th className="p-2 text-center w-16">GST %</th>
-                    <th className="p-2 text-right w-20">{isInterstate ? 'IGST (₹)' : 'GST (₹)'}</th>
-                    <th className="p-2 text-right w-24">Line Total (₹)</th>
-                    <th className="p-2 w-8 text-center"></th>
+                    <th className="p-2 w-8 text-center sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e]">#</th>
+                    <th className="p-2 w-28 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Barcode / SKU</th>
+                    <th className="p-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Item Description</th>
+                    <th className="p-2 text-center w-24 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Qty</th>
+                    <th className="p-2 w-14 text-center sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Unit</th>
+                    <th className="p-2 text-right w-20 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Rate (₹)</th>
+                    <th className="p-2 text-center w-16 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Disc %</th>
+                    <th className="p-2 text-right w-20 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Taxable (₹)</th>
+                    <th className="p-2 text-center w-16 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">GST %</th>
+                    <th className="p-2 text-right w-20 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">{isInterstate ? 'IGST (₹)' : 'GST (₹)'}</th>
+                    <th className="p-2 text-right w-24 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-[#153a5e] whitespace-nowrap">Line Total (₹)</th>
+                    <th className="p-2 w-8 text-center sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-[#153a5e]"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
@@ -1315,12 +1630,32 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 </select>
               </div>
 
+              <div className="flex items-center gap-1 text-slate-600">
+                <span className="font-semibold text-[11px]">Method:</span>
+                <select
+                  value={historyPayMethod}
+                  onChange={(e) => {
+                    setHistoryPayMethod(e.target.value);
+                    setHistoryPage(1);
+                  }}
+                  className="bg-white border border-slate-300 rounded px-2 py-1 text-xs"
+                >
+                  <option value="All">All Methods</option>
+                  <option value="Cash">💵 Cash</option>
+                  <option value="UPI">📱 UPI</option>
+                  <option value="Card">💳 Card</option>
+                  <option value="Bank Transfer">🏦 Bank Transfer</option>
+                  <option value="Credit">⏳ Credit / Due</option>
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
                   setHistorySearch('');
                   setHistoryStatus('All');
                   setHistoryPayStatus('All');
+                  setHistoryPayMethod('All');
                   setHistoryFromDate('');
                   setHistoryToDate('');
                   setHistoryPage(1);
@@ -1360,14 +1695,15 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   <th className="p-2 text-right w-24">GST (₹)</th>
                   <th className="p-2 text-right w-28">Grand Total (₹)</th>
                   <th className="p-2 text-center w-24">Status</th>
-                  <th className="p-2 text-center w-20">Payment</th>
-                  <th className="p-2 text-center w-36">Actions</th>
+                  <th className="p-2 text-center w-28">Payment Mode</th>
+                  <th className="p-2 text-center w-24">Pay Status</th>
+                  <th className="p-2 text-center w-44">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {historyResult.items.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="py-16 text-center text-slate-400">
+                    <td colSpan={14} className="py-16 text-center text-slate-400">
                       No invoices found matching current filter criteria.
                     </td>
                   </tr>
@@ -1423,20 +1759,90 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         </span>
                       </td>
                       <td className="p-2 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            inv.paymentStatus === 'Paid'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : inv.paymentStatus === 'Partial'
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {inv.paymentStatus}
-                        </span>
+                        {(() => {
+                          const methods = inv.payments?.length
+                            ? inv.payments.map((p) => p.paymentMethod).filter(Boolean)
+                            : [inv.paymentMode || 'Cash'];
+                          const primaryMethod = methods[0] || 'Cash';
+                          const isSplit = methods.length > 1;
+
+                          let badgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+                          let icon = '💵';
+                          if (primaryMethod === 'Cash') {
+                            badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                            icon = '💵';
+                          } else if (primaryMethod === 'UPI') {
+                            badgeClass = 'bg-violet-50 text-violet-800 border-violet-200';
+                            icon = '📱';
+                          } else if (primaryMethod === 'Card') {
+                            badgeClass = 'bg-blue-50 text-blue-800 border-blue-200';
+                            icon = '💳';
+                          } else if (primaryMethod === 'Bank Transfer') {
+                            badgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+                            icon = '🏦';
+                          } else if (primaryMethod === 'Credit') {
+                            badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
+                            icon = '⏳';
+                          }
+
+                          const refNum = inv.payments?.[0]?.referenceNumber;
+
+                          return (
+                            <div className="flex flex-col items-center">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-bold ${badgeClass}`}
+                              >
+                                <span>{icon}</span>
+                                <span>{isSplit ? `Split (${methods.length})` : primaryMethod}</span>
+                              </span>
+                              {refNum && (
+                                <span
+                                  className="text-[9px] text-slate-400 font-mono mt-0.5 truncate max-w-[90px]"
+                                  title={refNum}
+                                >
+                                  {refNum}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="p-2 text-center">
+                        <div className="flex flex-col items-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              inv.paymentStatus === 'Paid'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : inv.paymentStatus === 'Partial'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}
+                          >
+                            {inv.paymentStatus}
+                          </span>
+                          {inv.paymentStatus === 'Partial' && (
+                            <span className="text-[9px] text-amber-700 font-mono mt-0.5">
+                              Due ₹{inv.balanceDue.toFixed(0)}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-2 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleOpenEditBill(inv)}
+                            title="Edit Bill & Items"
+                            className="p-1 text-slate-600 hover:text-amber-700 rounded hover:bg-slate-100"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditPayment(inv)}
+                            title="Edit / Update Payment Method & Received Amount"
+                            className="p-1 text-slate-600 hover:text-emerald-700 rounded hover:bg-slate-100"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => setViewDetailsInvoice(inv)}
                             title="View Full Bill Details"
@@ -2169,7 +2575,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded border border-slate-200">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded border border-slate-200">
                 <div>
                   <span className="text-slate-500">Customer:</span>{' '}
                   <strong>{viewDetailsInvoice.customerName}</strong>
@@ -2191,9 +2597,37 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   <span className="font-bold">{viewDetailsInvoice.status}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500">Payment:</span>{' '}
+                  <span className="text-slate-500">Payment Status:</span>{' '}
                   <span className="font-bold">{viewDetailsInvoice.paymentStatus}</span>
                 </div>
+                <div>
+                  <span className="text-slate-500">Payment Method:</span>{' '}
+                  <strong className="text-emerald-800">
+                    {viewDetailsInvoice.payments?.map((p) => p.paymentMethod).filter(Boolean).join(', ') ||
+                      viewDetailsInvoice.paymentMode ||
+                      'Cash'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Amount Paid:</span>{' '}
+                  <strong className="font-mono text-emerald-700">₹{viewDetailsInvoice.amountPaid.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Balance Due:</span>{' '}
+                  <strong
+                    className={`font-mono ${viewDetailsInvoice.balanceDue > 0 ? 'text-amber-700' : 'text-slate-600'}`}
+                  >
+                    ₹{viewDetailsInvoice.balanceDue.toFixed(2)}
+                  </strong>
+                </div>
+                {viewDetailsInvoice.payments?.[0]?.referenceNumber && (
+                  <div className="col-span-2 sm:col-span-3">
+                    <span className="text-slate-500">Reference / Txn No:</span>{' '}
+                    <span className="font-mono font-medium text-slate-800">
+                      {viewDetailsInvoice.payments[0].referenceNumber}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -2246,30 +2680,694 @@ export const PosBilling: React.FC<PosBillingProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 shrink-0">
+            <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-200 shrink-0 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const inv = viewDetailsInvoice;
+                    setViewDetailsInvoice(null);
+                    handleOpenEditBill(inv);
+                  }}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold flex items-center gap-1"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Edit Bill</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const inv = viewDetailsInvoice;
+                    setViewDetailsInvoice(null);
+                    handleOpenEditPayment(inv);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Edit Payment</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrintFormat('thermal');
+                    setPrintModalInvoice(viewDetailsInvoice);
+                    setViewDetailsInvoice(null);
+                  }}
+                  className="px-3 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded text-xs font-semibold flex items-center gap-1"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Thermal</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrintFormat('a4');
+                    setPrintModalInvoice(viewDetailsInvoice);
+                    setViewDetailsInvoice(null);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-semibold flex items-center gap-1"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Print A4 Invoice</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 5: EDIT BILL MODAL                                  */}
+      {/* ========================================================= */}
+      {editBillInvoice && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3">
+          <div className="bg-[#f0f0f0] rounded border border-[#0055ea] shadow-2xl max-w-4xl w-full flex flex-col max-h-[92vh] overflow-hidden">
+            {/* Title Bar */}
+            <div className="bg-gradient-to-r from-[#1b5e20] to-[#2e7d32] text-white px-3 py-2 flex items-center justify-between select-none">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Edit className="w-4 h-4 text-emerald-300" />
+                <span>Edit Bill — Invoice #{editBillInvoice.invoiceNumber}</span>
+                <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded font-mono">
+                  Status: {editBillInvoice.status}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditBillInvoice(null)}
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editBillError && (
+              <div className="bg-rose-100 border-b border-rose-300 text-rose-800 px-4 py-2 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{editBillError}</span>
+              </div>
+            )}
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-white text-xs">
+              {/* Row 1: Header metadata */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded border border-slate-300">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Invoice Number</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={editBillInvoice.invoiceNumber}
+                    className="w-full bg-slate-100 border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Invoice Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={editBillDate}
+                    onChange={(e) => setEditBillDate(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Select Customer</label>
+                  <select
+                    value={editBillCustomerId}
+                    onChange={(e) => {
+                      const cId = Number(e.target.value);
+                      setEditBillCustomerId(cId);
+                      const cust = allCustomers.find((c) => c.id === cId);
+                      if (cust) {
+                        setEditBillCustomerName(cust.name);
+                        setEditBillCustomerMobile(cust.mobile || '');
+                        setEditBillCustomerGstin(cust.gstin || '');
+                      }
+                    }}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-slate-800"
+                  >
+                    {allCustomers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.mobile ? `(${c.mobile})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Customer Mobile</label>
+                  <input
+                    type="text"
+                    value={editBillCustomerMobile}
+                    onChange={(e) => setEditBillCustomerMobile(e.target.value)}
+                    placeholder="Mobile number"
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Items Table */}
+              <div className="border border-slate-300 rounded overflow-hidden">
+                <div className="bg-[#1f4e79] text-white px-2.5 py-1.5 flex items-center justify-between font-semibold">
+                  <span>Bill Items ({editBillItems.length})</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={editBillAddProductId}
+                      onChange={(e) => {
+                        const pId = Number(e.target.value);
+                        if (!pId) return;
+                        const prod = allProducts.find((p) => p.id === pId);
+                        if (prod) {
+                          handleAddProductToEditBill(prod);
+                        }
+                        setEditBillAddProductId('');
+                      }}
+                      className="bg-white text-slate-800 text-xs px-2 py-0.5 rounded font-normal"
+                    >
+                      <option value="">+ Add Product to Bill...</option>
+                      {allProducts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nameEn} ({p.barcode}) - ₹{p.saleRate} [Stock: {p.currentStock}]
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="max-h-52 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-300">
+                      <tr>
+                        <th className="p-1.5 w-8 text-center">#</th>
+                        <th className="p-1.5">Product Name</th>
+                        <th className="p-1.5 text-center w-20">Qty</th>
+                        <th className="p-1.5 text-right w-24">Rate (₹)</th>
+                        <th className="p-1.5 text-center w-16">Disc %</th>
+                        <th className="p-1.5 text-center w-16">GST %</th>
+                        <th className="p-1.5 text-right w-24">Total (₹)</th>
+                        <th className="p-1.5 text-center w-10">Act</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {editBillItems.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-blue-50/40">
+                          <td className="p-1.5 text-center font-mono text-slate-400">{idx + 1}</td>
+                          <td className="p-1.5">
+                            <div className="font-medium text-slate-800">{item.productName}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{item.barcode}</div>
+                          </td>
+                          <td className="p-1.5 text-center">
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateEditBillItemQty(idx, Number(e.target.value))}
+                              className="w-16 text-center border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
+                            />
+                          </td>
+                          <td className="p-1.5 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.rate}
+                              onChange={(e) => handleUpdateEditBillItemRate(idx, Number(e.target.value))}
+                              className="w-20 text-right border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
+                            />
+                          </td>
+                          <td className="p-1.5 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={item.discountPercent || 0}
+                              onChange={(e) => handleUpdateEditBillItemDisc(idx, Number(e.target.value))}
+                              className="w-14 text-center border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
+                            />
+                          </td>
+                          <td className="p-1.5 text-center font-mono">{item.taxRate}%</td>
+                          <td className="p-1.5 text-right font-mono font-bold text-slate-800">
+                            ₹{item.lineTotal.toFixed(2)}
+                          </td>
+                          <td className="p-1.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveEditBillItem(idx)}
+                              className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50"
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Row 3: Discounts, Charges & Payment Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Left: Discounts and Notes */}
+                <div className="bg-slate-50 p-2.5 rounded border border-slate-300 space-y-2">
+                  <div className="font-semibold text-slate-700 text-xs border-b border-slate-200 pb-1">
+                    Discounts & Charges
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-600 mb-0.5">Bill Discount (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillDiscount}
+                        onChange={(e) => setEditBillDiscount(Math.max(0, Number(e.target.value) || 0))}
+                        className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-600 mb-0.5">Other Charges (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editBillOtherCharges}
+                        onChange={(e) => setEditBillOtherCharges(Math.max(0, Number(e.target.value) || 0))}
+                        className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-600 mb-0.5">Bill Notes / Remarks</label>
+                    <textarea
+                      rows={2}
+                      value={editBillNotes}
+                      onChange={(e) => setEditBillNotes(e.target.value)}
+                      placeholder="Optional notes or remarks"
+                      className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Payment Method & Payment Editing */}
+                <div className="bg-emerald-50/60 p-2.5 rounded border border-emerald-300 space-y-2">
+                  <div className="flex items-center justify-between border-b border-emerald-200 pb-1">
+                    <span className="font-bold text-emerald-900 text-xs flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Payment Settlement</span>
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        editBillAmountPaid >= (editBillCalculated?.grandTotal || 0)
+                          ? 'bg-emerald-200 text-emerald-900'
+                          : editBillAmountPaid > 0
+                          ? 'bg-amber-200 text-amber-900'
+                          : 'bg-rose-200 text-rose-900'
+                      }`}
+                    >
+                      {editBillAmountPaid >= (editBillCalculated?.grandTotal || 0)
+                        ? 'Paid'
+                        : editBillAmountPaid > 0
+                        ? 'Partial'
+                        : 'Unpaid'}
+                    </span>
+                  </div>
+
+                  {/* Payment Method Selector */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Payment Method:
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1">
+                      {(['Cash', 'UPI', 'Card', 'Bank Transfer', 'Credit'] as const).map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setEditBillPaymentMethod(method)}
+                          className={`py-1 px-1 rounded text-[11px] font-bold transition-all border text-center ${
+                            editBillPaymentMethod === method
+                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          {method === 'Cash' && '💵 '}
+                          {method === 'UPI' && '📱 '}
+                          {method === 'Card' && '💳 '}
+                          {method === 'Bank Transfer' && '🏦 '}
+                          {method === 'Credit' && '⏳ '}
+                          {method}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Amount Paid and Quick Buttons */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-slate-700">Amount Tendered / Paid (₹):</label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditBillAmountPaid(editBillCalculated?.grandTotal || 0)}
+                          className="text-[10px] bg-emerald-700 hover:bg-emerald-800 text-white px-2 py-0.5 rounded font-bold"
+                        >
+                          Exact (₹{editBillCalculated?.grandTotal || 0})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditBillAmountPaid(0)}
+                          className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-medium"
+                        >
+                          ₹0 (Due)
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editBillAmountPaid}
+                      onChange={(e) => setEditBillAmountPaid(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full bg-white border border-emerald-400 rounded px-2 py-1.5 font-mono font-bold text-sm text-emerald-900"
+                    />
+                  </div>
+
+                  {/* Reference Number */}
+                  <div>
+                    <label className="block text-[11px] text-slate-600 mb-0.5">
+                      Reference / Transaction No. (UPI ID / Cheque / Card Slip):
+                    </label>
+                    <input
+                      type="text"
+                      value={editBillRefNumber}
+                      onChange={(e) => setEditBillRefNumber(e.target.value)}
+                      placeholder={editBillPaymentMethod === 'Cash' ? 'CASH-COUNTER' : 'e.g. UPI-92837482'}
+                      className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4: Totals Summary Strip */}
+              {editBillCalculated && (
+                <div className="bg-slate-100 p-2.5 rounded border border-slate-300 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="text-slate-500">Gross:</span>{' '}
+                      <strong className="font-mono">₹{editBillCalculated.grossAmount.toFixed(2)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Taxable:</span>{' '}
+                      <strong className="font-mono">₹{editBillCalculated.taxableAmount.toFixed(2)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">GST:</span>{' '}
+                      <strong className="font-mono">₹{editBillCalculated.totalTaxAmount.toFixed(2)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Roundoff:</span>{' '}
+                      <span className="font-mono">
+                        {editBillCalculated.roundOff >= 0
+                          ? `+₹${editBillCalculated.roundOff.toFixed(2)}`
+                          : `-₹${Math.abs(editBillCalculated.roundOff).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="text-slate-600 font-semibold">Grand Total:</span>{' '}
+                      <span className="font-mono font-bold text-base text-[#106ebe]">
+                        ₹{editBillCalculated.grandTotal.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="text-right border-l border-slate-300 pl-4">
+                      <span className="text-slate-600 font-semibold">Balance Due:</span>{' '}
+                      <span
+                        className={`font-mono font-bold text-sm ${
+                          editBillCalculated.balanceDue > 0 ? 'text-amber-700' : 'text-emerald-700'
+                        }`}
+                      >
+                        ₹{editBillCalculated.balanceDue.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-[#e5e5e5] border-t border-[#d0d0d0] px-3 py-2 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => {
-                  setPrintFormat('thermal');
-                  setPrintModalInvoice(viewDetailsInvoice);
-                  setViewDetailsInvoice(null);
+                  setCartItems(editBillItems);
+                  setSelectedCustomerId(editBillCustomerId);
+                  setBillDiscount(editBillDiscount);
+                  setOtherCharges(editBillOtherCharges);
+                  setPaymentMethod(editBillPaymentMethod);
+                  setTenderedAmount(editBillAmountPaid);
+                  setEditBillInvoice(null);
+                  setActiveSubTab('pos');
+                  setAlertMessage({
+                    type: 'info' as any,
+                    text: `Loaded Bill #${editBillInvoice.invoiceNumber} into POS register screen.`,
+                  });
+                  setTimeout(() => setAlertMessage(null), 3000);
                 }}
-                className="px-3 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded text-xs font-semibold flex items-center gap-1"
+                className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded font-semibold text-xs flex items-center gap-1.5 border border-blue-300"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Thermal</span>
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>Open in POS Counter</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditBillInvoice(null)}
+                  className="px-4 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 rounded font-medium text-xs text-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditBill}
+                  className="px-5 py-1.5 bg-[#1b5e20] hover:bg-[#2e7d32] text-white rounded font-bold text-xs shadow-xs flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Save Bill Changes</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL 6: EDIT PAYMENT MODAL                               */}
+      {/* ========================================================= */}
+      {editPaymentInvoice && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3">
+          <div className="bg-[#f0f0f0] rounded border border-[#0055ea] shadow-2xl max-w-lg w-full flex flex-col overflow-hidden">
+            {/* Title Bar */}
+            <div className="bg-gradient-to-r from-[#0055ea] to-[#106ebe] text-white px-3 py-2 flex items-center justify-between select-none">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <CreditCard className="w-4 h-4 text-cyan-200" />
+                <span>Edit Payment — Invoice #{editPaymentInvoice.invoiceNumber}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditPaymentInvoice(null)}
+                className="text-white/80 hover:text-white hover:bg-white/20 rounded p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editPayError && (
+              <div className="bg-rose-100 border-b border-rose-300 text-rose-800 px-4 py-2 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{editPayError}</span>
+              </div>
+            )}
+
+            {/* Body */}
+            <div className="p-4 space-y-3 bg-white text-xs">
+              {/* Bill Summary */}
+              <div className="bg-slate-50 p-3 rounded border border-slate-200 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500">Customer:</span>{' '}
+                  <strong>{editPaymentInvoice.customerName}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Bill Date:</span>{' '}
+                  <span className="font-mono">{new Date(editPaymentInvoice.invoiceDate).toLocaleDateString()}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Bill Total:</span>{' '}
+                  <strong className="font-mono text-blue-900 text-sm">
+                    ₹{editPaymentInvoice.grandTotal.toFixed(2)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Current Status:</span>{' '}
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      editPaymentInvoice.paymentStatus === 'Paid'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : editPaymentInvoice.paymentStatus === 'Partial'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {editPaymentInvoice.paymentStatus}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                  Select Payment Method:
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {(['Cash', 'UPI', 'Card', 'Bank Transfer', 'Credit'] as const).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setEditPayMethod(method)}
+                      className={`py-1.5 px-2 rounded text-xs font-bold transition-all border text-center flex flex-col items-center gap-0.5 ${
+                        editPayMethod === method
+                          ? 'bg-[#106ebe] text-white border-[#005a9e] shadow-xs ring-2 ring-blue-300'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-sm">
+                        {method === 'Cash' && '💵'}
+                        {method === 'UPI' && '📱'}
+                        {method === 'Card' && '💳'}
+                        {method === 'Bank Transfer' && '🏦'}
+                        {method === 'Credit' && '⏳'}
+                      </span>
+                      <span className="text-[10px]">{method}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Amount Paid */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-slate-700">Amount Paid (₹):</label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditPayAmount(editPaymentInvoice.grandTotal)}
+                      className="text-[10px] bg-emerald-700 hover:bg-emerald-800 text-white px-2 py-0.5 rounded font-bold"
+                    >
+                      Mark Full (₹{editPaymentInvoice.grandTotal})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPayAmount(0)}
+                      className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-medium"
+                    >
+                      ₹0 (Credit/Due)
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editPayAmount}
+                  onChange={(e) => setEditPayAmount(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-full bg-white border border-blue-400 rounded px-2.5 py-1.5 font-mono font-bold text-base text-slate-900"
+                />
+              </div>
+
+              {/* Dynamic Balance / Change preview */}
+              <div className="bg-slate-50 p-2.5 rounded border border-slate-200 flex justify-between items-center text-xs">
+                <div>
+                  <span className="text-slate-500">Balance Due:</span>{' '}
+                  <strong
+                    className={`font-mono text-sm ${
+                      editPayAmount < editPaymentInvoice.grandTotal ? 'text-amber-700' : 'text-emerald-700'
+                    }`}
+                  >
+                    ₹{Math.max(0, editPaymentInvoice.grandTotal - editPayAmount).toFixed(2)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Resulting Status:</span>{' '}
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      editPayAmount >= editPaymentInvoice.grandTotal
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : editPayAmount > 0
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {editPayAmount >= editPaymentInvoice.grandTotal
+                      ? 'Paid'
+                      : editPayAmount > 0
+                      ? 'Partial'
+                      : 'Unpaid'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reference Number */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Payment Reference / Transaction ID:
+                </label>
+                <input
+                  type="text"
+                  value={editPayRefNumber}
+                  onChange={(e) => setEditPayRefNumber(e.target.value)}
+                  placeholder={
+                    editPayMethod === 'Cash'
+                      ? 'CASH-COUNTER'
+                      : editPayMethod === 'UPI'
+                      ? 'e.g. UPI-9830219482'
+                      : editPayMethod === 'Card'
+                      ? 'Card last 4 digits / Auth Code'
+                      : 'Cheque No. / NEFT Ref'
+                  }
+                  className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-xs"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Payment Notes / Remarks:
+                </label>
+                <input
+                  type="text"
+                  value={editPayNotes}
+                  onChange={(e) => setEditPayNotes(e.target.value)}
+                  placeholder="e.g. Received via GPay from customer"
+                  className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-[#e5e5e5] border-t border-[#d0d0d0] px-3 py-2 flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditPaymentInvoice(null)}
+                className="px-4 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 rounded font-medium text-xs text-slate-700"
+              >
+                Cancel
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setPrintFormat('a4');
-                  setPrintModalInvoice(viewDetailsInvoice);
-                  setViewDetailsInvoice(null);
-                }}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-semibold flex items-center gap-1"
+                onClick={handleSaveEditPayment}
+                className="px-5 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded font-bold text-xs shadow-xs flex items-center gap-1.5"
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Print A4 Invoice</span>
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Save Payment</span>
               </button>
             </div>
           </div>

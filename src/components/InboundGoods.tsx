@@ -824,23 +824,23 @@ export const InboundGoods: React.FC<InboundGoodsProps> = ({
           {/* 4. Line Items Grid */}
           <div className="flex-1 flex overflow-hidden">
             <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-[#1f4e79] text-white sticky top-0 z-10 select-none shadow-xs">
+              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[950px]">
+                <thead className="sticky top-0 z-20 select-none shadow-xs">
                   <tr>
-                    <th className="py-2 px-2 border-b border-r border-blue-900/40 w-10 text-center">#</th>
-                    <th className="py-2 px-2.5 border-b border-r border-blue-900/40 w-24">Barcode</th>
-                    <th className="py-2 px-3 border-b border-r border-blue-900/40">Product Description</th>
-                    <th className="py-2 px-2 border-b border-r border-blue-900/40 text-center w-16">Qty</th>
-                    <th className="py-2 px-2 border-b border-r border-blue-900/40 text-center w-16">Free</th>
-                    <th className="py-2 px-2.5 border-b border-r border-blue-900/40 text-right w-20">Rate (₹)</th>
-                    <th className="py-2 px-2 border-b border-r border-blue-900/40 text-right w-16">Disc %</th>
-                    <th className="py-2 px-2.5 border-b border-r border-blue-900/40 text-right w-20">Taxable</th>
-                    <th className="py-2 px-2 border-b border-r border-blue-900/40 text-center w-14">GST %</th>
-                    <th className="py-2 px-2.5 border-b border-r border-blue-900/40 text-right w-20">GST (₹)</th>
-                    <th className="py-2 px-3 border-b border-r border-blue-900/40 text-right w-24">Total (₹)</th>
-                    <th className="py-2 px-2 border-b border-r border-blue-900/40 w-24">Batch / Exp</th>
+                    <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 w-10 text-center whitespace-nowrap">#</th>
+                    <th className="py-2 px-2.5 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 w-24 whitespace-nowrap">Barcode</th>
+                    <th className="py-2 px-3 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 whitespace-nowrap">Product Description</th>
+                    <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-center w-16 whitespace-nowrap">Qty</th>
+                    <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-center w-16 whitespace-nowrap">Free</th>
+                    <th className="py-2 px-2.5 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-right w-20 whitespace-nowrap">Rate (₹)</th>
+                    <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-right w-16 whitespace-nowrap">Disc %</th>
+                    <th className="py-2 px-2.5 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-right w-20 whitespace-nowrap">Taxable</th>
+                    <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-center w-14 whitespace-nowrap">GST %</th>
+                    <th className="py-2 px-2.5 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-right w-20 whitespace-nowrap">GST (₹)</th>
+                    <th className="py-2 px-3 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 text-right w-24 whitespace-nowrap">Total (₹)</th>
+                    <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 w-24 whitespace-nowrap">Batch / Exp</th>
                     {status !== 'Confirmed' && status !== 'Cancelled' && (
-                      <th className="py-2 px-2 border-b text-center w-12">Del</th>
+                      <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-blue-900/60 text-center w-12 whitespace-nowrap">Del</th>
                     )}
                   </tr>
                 </thead>

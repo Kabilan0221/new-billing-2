@@ -116,7 +116,7 @@ namespace ShopBilling.Data.Database
                     }
 
                     // 3. Verify schema compatibility: Core ShopBilling tables must exist
-                    var requiredTables = new List<string> { "products", "categories", "invoices", "customers", "schema_migrations" };
+                    var requiredTables = new string[] { "products", "categories", "invoices", "customers", "schema_migrations" };
                     using (var tableCmd = testConn.CreateCommand())
                     {
                         tableCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table';";
@@ -129,15 +129,18 @@ namespace ShopBilling.Data.Database
                             }
                         }
 
-                        int matchCount = 0;
+                        var missingTables = new List<string>();
                         foreach (var req in requiredTables)
                         {
-                            if (existingTables.Contains(req)) matchCount++;
+                            if (!existingTables.Contains(req))
+                            {
+                                missingTables.Add(req);
+                            }
                         }
 
-                        if (matchCount < 4)
+                        if (missingTables.Count > 0)
                         {
-                            validationError = "The backup file does not contain a compatible ShopBilling database schema (missing essential business tables).";
+                            validationError = $"The backup file does not contain a compatible ShopBilling database schema (missing essential business table(s): {string.Join(", ", missingTables)}).";
                             return false;
                         }
                     }
@@ -164,7 +167,10 @@ namespace ShopBilling.Data.Database
                 return false;
             }
 
-            // 2. Create an automatic safety backup of current production database before any modifications
+            // 2. Clear all connection pools before taking backup or touching database
+            SQLiteConnection.ClearAllPools();
+
+            // 3. Create an automatic safety backup of current production database before any modifications
             try
             {
                 var dbDir = Path.GetDirectoryName(DatabaseConnection.DatabaseFilePath);
@@ -178,7 +184,10 @@ namespace ShopBilling.Data.Database
                 return false;
             }
 
-            // 3. Perform live restore into current active database via SQLite Online Backup API
+            // Clear pools again after safety backup
+            SQLiteConnection.ClearAllPools();
+
+            // 4. Perform live restore into current active database via SQLite Online Backup API
             string sourceConnString = $"Data Source={backupFilePath};Version=3;Read Only=True;FailIfMissing=True;";
             try
             {
@@ -188,7 +197,7 @@ namespace ShopBilling.Data.Database
                     sourceConn.Open();
                     sourceConn.BackupDatabase(destConn, "main", "main", -1, null, 0);
 
-                    // 4. Verify post-restore integrity
+                    // Verify post-restore integrity
                     using (var verifyCmd = destConn.CreateCommand())
                     {
                         verifyCmd.CommandText = "PRAGMA quick_check;";
@@ -198,14 +207,23 @@ namespace ShopBilling.Data.Database
                             throw new InvalidOperationException($"Post-restore integrity check failed: {postCheck}");
                         }
                     }
+
+                    // Flush and truncate WAL to guarantee main database file consistency
+                    using (var checkpointCmd = destConn.CreateCommand())
+                    {
+                        checkpointCmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                        checkpointCmd.ExecuteNonQuery();
+                    }
                 }
 
+                SQLiteConnection.ClearAllPools();
                 AppLogger.Info($"Database restored successfully from: {backupFilePath}");
                 return true;
             }
             catch (Exception ex)
             {
                 AppLogger.Error($"Database restore operation failed: {ex.Message}");
+                SQLiteConnection.ClearAllPools();
 
                 // Attempt automatic recovery rollback from safety backup
                 if (!string.IsNullOrEmpty(safetyBackupPath) && File.Exists(safetyBackupPath))
@@ -217,7 +235,14 @@ namespace ShopBilling.Data.Database
                         {
                             safetyConn.Open();
                             safetyConn.BackupDatabase(destConn, "main", "main", -1, null, 0);
+
+                            using (var checkpointCmd = destConn.CreateCommand())
+                            {
+                                checkpointCmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                                checkpointCmd.ExecuteNonQuery();
+                            }
                         }
+                        SQLiteConnection.ClearAllPools();
                         errorMessage = $"Restore failed: {ex.Message}. Automatic rollback was executed and the original database was restored from safety backup ({Path.GetFileName(safetyBackupPath)}).";
                     }
                     catch (Exception rollEx)

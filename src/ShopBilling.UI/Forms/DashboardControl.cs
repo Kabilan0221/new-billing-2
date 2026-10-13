@@ -14,7 +14,6 @@ namespace ShopBilling.UI.Forms
         public event Action<int> OnNavigate;
 
         private FlowLayoutPanel pnlCards;
-        private DataGridView gridLast7Days;
         private Label lblTodaySalesVal;
         private Label lblTodayBillsVal;
         private Label lblTodayPurchasesVal;
@@ -153,47 +152,6 @@ namespace ShopBilling.UI.Forms
 
             pnlQuickActions.Controls.Add(flowShortcuts);
 
-            // Recent 7 Days Sales Trend Table Panel
-            var pnlTrend = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 280,
-                Margin = new Padding(0, 15, 0, 0),
-                BackColor = Color.White,
-                Padding = new Padding(16)
-            };
-
-            var lblTrendTitle = new Label
-            {
-                Text = "Recent Sales Overview (Last 7 Days)",
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(24, 43, 73),
-                Dock = DockStyle.Top,
-                Height = 30
-            };
-
-            gridLast7Days = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
-                RowHeadersVisible = false,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                ReadOnly = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
-            };
-
-            gridLast7Days.Columns.Add("Date", "Date");
-            gridLast7Days.Columns.Add("Bills", "Bill Count");
-            gridLast7Days.Columns.Add("Tax", "GST Collected");
-            gridLast7Days.Columns.Add("Sales", "Gross Sales Total");
-
-            pnlTrend.Controls.Add(gridLast7Days);
-            pnlTrend.Controls.Add(lblTrendTitle);
-
-            pnlMain.Controls.Add(pnlTrend);
             pnlMain.Controls.Add(pnlQuickActions);
             pnlMain.Controls.Add(pnlCards);
             pnlMain.Controls.Add(pnlHeader);
@@ -280,22 +238,6 @@ namespace ShopBilling.UI.Forms
                 lblTotalCustomersVal.Text = $"{metrics.TotalCustomerCount:N0}";
                 lblOutstandingVal.Text = $"₹{metrics.OutstandingCustomerBalance:N2}";
                 lblPaymentsReceivedVal.Text = $"₹{metrics.PaymentsReceivedToday:N2}";
-
-                gridLast7Days.Rows.Clear();
-                foreach (var item in metrics.Last7DaysSales)
-                {
-                    gridLast7Days.Rows.Add(
-                        item.DateString,
-                        item.BillCount,
-                        $"₹{item.TaxCollected:N2}",
-                        $"₹{item.SalesAmount:N2}"
-                    );
-                }
-
-                if (metrics.Last7DaysSales.Count == 0)
-                {
-                    gridLast7Days.Rows.Add("No sales recorded in the last 7 days", "-", "-", "₹0.00");
-                }
             }
             catch (Exception ex)
             {

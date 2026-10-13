@@ -105,12 +105,12 @@ export const BackupRestoreView: React.FC = () => {
 
   // 4. Reset Web Simulation to Factory Seeds (Explicitly Labeled)
   const handleResetFactoryDefaults = () => {
-    if (confirm('Reset web simulation to initial factory seed catalog? This only affects the browser preview state.')) {
+    if (confirm('Reset web simulation to initial factory seed catalog? This only affects the browser preview state and clears saved preview LocalStorage.')) {
       setIsProcessing(true);
       setTimeout(() => {
-        db.resetToDefaults();
+        db.clearLocalStoragePreview();
         setIsProcessing(false);
-        showNotification('Web preview restored to default baseline seed state.');
+        showNotification('Web preview restored to default baseline seed state and LocalStorage reset.');
       }, 300);
     }
   };

@@ -293,17 +293,17 @@ export const BarcodeStudio: React.FC<BarcodeStudioProps> = ({ onRefreshData, onN
 
           {/* Catalog Grid */}
           <div className="flex-1 overflow-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#e9eef4] border-b border-[#cbd5e1] text-slate-700 font-bold sticky top-0 z-10 select-none">
+            <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[750px]">
+              <thead className="sticky top-0 z-20 select-none shadow-xs">
                 <tr>
-                  <th className="py-1.5 px-2.5 w-10 text-center">Print</th>
-                  <th className="py-1.5 px-2.5 w-24">Product Code</th>
-                  <th className="py-1.5 px-2.5 w-36">Barcode</th>
-                  <th className="py-1.5 px-2.5">Product Description</th>
-                  <th className="py-1.5 px-2.5 w-20 text-right">Sale Rate</th>
-                  <th className="py-1.5 px-2.5 w-16 text-center">Stock</th>
-                  <th className="py-1.5 px-2.5 w-20 text-center">Copies</th>
-                  <th className="py-1.5 px-2.5 w-24 text-center">Action</th>
+                  <th className="py-1.5 px-2.5 w-10 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Print</th>
+                  <th className="py-1.5 px-2.5 w-24 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Product Code</th>
+                  <th className="py-1.5 px-2.5 w-36 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Barcode</th>
+                  <th className="py-1.5 px-2.5 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Product Description</th>
+                  <th className="py-1.5 px-2.5 w-20 text-right sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Sale Rate</th>
+                  <th className="py-1.5 px-2.5 w-16 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Stock</th>
+                  <th className="py-1.5 px-2.5 w-20 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Copies</th>
+                  <th className="py-1.5 px-2.5 w-24 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-[#cbd5e1] whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">

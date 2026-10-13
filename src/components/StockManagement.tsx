@@ -1000,25 +1000,25 @@ export const StockManagement: React.FC<StockManagementProps> = ({
 
             {/* DataGridView Table */}
             <div className="flex-1 overflow-auto bg-white">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#f0f4f8] text-slate-700 font-semibold border-b border-slate-300 sticky top-0 z-10 shadow-2xs">
+              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[1200px]">
+                <thead className="sticky top-0 z-20 shadow-2xs">
                   <tr>
-                    <th className="py-2.5 px-3">Code / SKU</th>
-                    <th className="py-2.5 px-3">Barcode</th>
-                    <th className="py-2.5 px-3">Product Name</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3 text-right">Opening</th>
-                    <th className="py-2.5 px-3 text-right">Purchased</th>
-                    <th className="py-2.5 px-3 text-right">Free Qty</th>
-                    <th className="py-2.5 px-3 text-right">Adjustments</th>
-                    <th className="py-2.5 px-3 text-right bg-blue-50/70 border-x border-blue-200 font-bold text-blue-900">
+                    <th className="py-2.5 px-3 sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Code / SKU</th>
+                    <th className="py-2.5 px-3 sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Barcode</th>
+                    <th className="py-2.5 px-3 sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Product Name</th>
+                    <th className="py-2.5 px-3 sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Category</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Opening</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Purchased</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Free Qty</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Adjustments</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-blue-100/90 text-blue-900 border-b border-r border-blue-300 font-bold whitespace-nowrap">
                       Current Stock
                     </th>
-                    <th className="py-2.5 px-3 text-right">Reorder Level</th>
-                    <th className="py-2.5 px-3 text-right">Cost Rate (₹)</th>
-                    <th className="py-2.5 px-3 text-right">Stock Value (₹)</th>
-                    <th className="py-2.5 px-3 text-center">Status</th>
-                    <th className="py-2.5 px-3 text-center">Actions</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Reorder Level</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Cost Rate (₹)</th>
+                    <th className="py-2.5 px-3 text-right sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Stock Value (₹)</th>
+                    <th className="py-2.5 px-3 text-center sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Status</th>
+                    <th className="py-2.5 px-3 text-center sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-slate-300 whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-sans">
