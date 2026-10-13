@@ -1000,7 +1000,7 @@ export const StockManagement: React.FC<StockManagementProps> = ({
 
             {/* DataGridView Table */}
             <div className="flex-1 overflow-auto bg-white">
-              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[1200px]">
+              <table className="w-full text-left text-xs border-separate border-spacing-0">
                 <thead className="sticky top-0 z-20 shadow-2xs">
                   <tr>
                     <th className="py-2.5 px-3 sticky top-0 z-20 bg-[#f0f4f8] text-slate-700 font-semibold border-b border-r border-slate-300 whitespace-nowrap">Code / SKU</th>

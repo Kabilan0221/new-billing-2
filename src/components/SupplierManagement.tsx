@@ -176,106 +176,104 @@ export const SupplierManagement: React.FC<SupplierManagementProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white select-none overflow-hidden">
-      {/* 1. Main Action Toolbar (WinForms Style) */}
-      <div className="bg-[#f0f4f9] border-b border-[#c8d4e2] px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded font-medium shadow-xs transition-colors cursor-pointer"
-            title="Create a new supplier profile (F2)"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Add Supplier</span>
-            <span className="text-[10px] bg-white/20 px-1 py-0.2 rounded font-mono ml-0.5">F2</span>
-          </button>
+      {/* 1. Main Action Toolbar (WinForms Style) - Single Line, No Scrollbar */}
+      <div className="bg-[#f0f4f9] border-b border-[#c8d4e2] px-2.5 py-1.5 flex items-center gap-1 text-xs overflow-hidden select-none">
+        <button
+          onClick={handleAddNew}
+          className="flex items-center gap-1 px-2 py-1 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded font-medium shadow-xs transition-colors cursor-pointer shrink-0 whitespace-nowrap text-xs"
+          title="Create a new supplier profile (F2)"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>+ Add Supplier</span>
+          <span className="text-[10px] bg-white/20 px-1 py-0.2 rounded font-mono">F2</span>
+        </button>
 
-          <button
-            onClick={() => selectedSupplier && handleEdit(selectedSupplier)}
-            disabled={!selectedSupplier}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer"
-            title="Edit selected supplier"
-          >
-            <Edit2 className="w-3.5 h-3.5 text-blue-600" />
-            <span>Edit</span>
-          </button>
+        <button
+          onClick={() => selectedSupplier && handleEdit(selectedSupplier)}
+          disabled={!selectedSupplier}
+          className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer shrink-0 whitespace-nowrap text-xs"
+          title="Edit selected supplier"
+        >
+          <Edit2 className="w-3.5 h-3.5 text-blue-600" />
+          <span>Edit</span>
+        </button>
 
-          <button
-            onClick={() => selectedSupplier && handleToggleActive(selectedSupplier)}
-            disabled={!selectedSupplier}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-medium transition-colors disabled:opacity-40 border cursor-pointer ${
-              selectedSupplier?.isActive
-                ? 'bg-white border-slate-300 hover:bg-rose-50 text-rose-700'
-                : 'bg-white border-slate-300 hover:bg-emerald-50 text-emerald-700'
-            }`}
-            title="Activate / Deactivate supplier"
-          >
-            {selectedSupplier?.isActive ? (
-              <>
-                <UserX className="w-3.5 h-3.5 text-rose-600" />
-                <span>Deactivate</span>
-              </>
-            ) : (
-              <>
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Re-Activate</span>
-              </>
-            )}
-          </button>
-
-          <div className="w-[1px] h-5 bg-slate-300 mx-1" />
-
-          <button
-            onClick={() => selectedSupplier && setIsLedgerDialogOpen(true)}
-            disabled={!selectedSupplier}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer"
-            title="View statement and transaction ledger"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Ledger & Statement</span>
-          </button>
-
-          <button
-            onClick={() => selectedSupplier && setIsPaymentDialogOpen(true)}
-            disabled={!selectedSupplier}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer"
-            title="Record supplier payment"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Make Payment</span>
-          </button>
-
-          {onNavigateToInbound && (
-            <button
-              onClick={() => onNavigateToInbound(selectedSupplier?.id)}
-              disabled={!selectedSupplier}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-900 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer"
-              title="Record inbound goods invoice from this supplier"
-            >
-              <Building className="w-3.5 h-3.5 text-amber-700" />
-              <span>+ Purchase Entry (F3)</span>
-            </button>
+        <button
+          onClick={() => selectedSupplier && handleToggleActive(selectedSupplier)}
+          disabled={!selectedSupplier}
+          className={`flex items-center gap-1 px-2 py-1 rounded font-medium transition-colors disabled:opacity-40 border cursor-pointer shrink-0 whitespace-nowrap text-xs ${
+            selectedSupplier?.isActive
+              ? 'bg-white border-slate-300 hover:bg-rose-50 text-rose-700'
+              : 'bg-white border-slate-300 hover:bg-emerald-50 text-emerald-700'
+          }`}
+          title="Activate / Deactivate supplier"
+        >
+          {selectedSupplier?.isActive ? (
+            <>
+              <UserX className="w-3.5 h-3.5 text-rose-600" />
+              <span>Deactivate</span>
+            </>
+          ) : (
+            <>
+              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Re-Activate</span>
+            </>
           )}
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setIsImportDialogOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded transition-colors cursor-pointer"
-            title="Import suppliers from Excel spreadsheet"
-          >
-            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Import Excel</span>
-          </button>
+        <div className="w-[1px] h-4 bg-slate-300 mx-0.5 shrink-0" />
 
+        <button
+          onClick={() => selectedSupplier && setIsLedgerDialogOpen(true)}
+          disabled={!selectedSupplier}
+          className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer shrink-0 whitespace-nowrap text-xs"
+          title="View statement and transaction ledger"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Ledger & Statement</span>
+        </button>
+
+        <button
+          onClick={() => selectedSupplier && setIsPaymentDialogOpen(true)}
+          disabled={!selectedSupplier}
+          className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer shrink-0 whitespace-nowrap text-xs"
+          title="Record supplier payment"
+        >
+          <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Payment</span>
+        </button>
+
+        {onNavigateToInbound && (
           <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded transition-colors cursor-pointer"
-            title="Export supplier list to Microsoft Excel"
+            onClick={() => onNavigateToInbound(selectedSupplier?.id)}
+            disabled={!selectedSupplier}
+            className="flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-900 rounded font-medium transition-colors disabled:opacity-40 cursor-pointer shrink-0 whitespace-nowrap text-xs"
+            title="Record inbound goods invoice from this supplier"
           >
-            <Download className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Export Excel</span>
+            <Building className="w-3.5 h-3.5 text-amber-700" />
+            <span>+ Purchase Entry (F3)</span>
           </button>
-        </div>
+        )}
+
+        <div className="w-[1px] h-4 bg-slate-300 mx-0.5 shrink-0" />
+
+        <button
+          onClick={() => setIsImportDialogOpen(true)}
+          className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded transition-colors cursor-pointer shrink-0 whitespace-nowrap text-xs"
+          title="Import suppliers from Excel spreadsheet"
+        >
+          <Upload className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Import Excel</span>
+        </button>
+
+        <button
+          onClick={handleExportExcel}
+          className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded transition-colors cursor-pointer shrink-0 whitespace-nowrap text-xs"
+          title="Export supplier list to Microsoft Excel"
+        >
+          <Download className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Export Excel</span>
+        </button>
       </div>
 
       {/* Feedback banner */}
@@ -301,8 +299,8 @@ export const SupplierManagement: React.FC<SupplierManagementProps> = ({
         </div>
       )}
 
-      {/* 2. Search & Filter Bar */}
-      <div className="bg-[#fafbfc] border-b border-[#e2e8f0] px-3 py-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+      {/* 2. Search & Filter Bar - Single Line */}
+      <div className="bg-[#fafbfc] border-b border-[#e2e8f0] px-3 py-1.5 flex items-center justify-between gap-3 text-xs overflow-x-auto whitespace-nowrap shrink-0">
         <div className="flex items-center gap-2 flex-1 max-w-2xl">
           <div className="relative flex-1">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />

@@ -272,7 +272,7 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
         {/* Top Split: Estimates Master List */}
         <div className="flex-1 bg-white border border-[#c0c6cf] rounded shadow-xs flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto">
-            <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[950px]">
+            <table className="w-full text-left text-xs border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 select-none shadow-xs">
                 <tr>
                   <th className="py-1.5 px-3 w-32 sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Estimate No</th>
@@ -372,7 +372,7 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
             </div>
 
             <div className="flex-1 overflow-auto">
-              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[850px]">
+              <table className="w-full text-left text-xs border-separate border-spacing-0">
                 <thead className="sticky top-0 z-20 shadow-xs">
                   <tr>
                     <th className="py-1 px-3 w-10 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-slate-300 whitespace-nowrap">#</th>
@@ -850,8 +850,8 @@ const NewEstimateDialog: React.FC<NewEstimateDialogProps> = ({ onClose, onSaved 
       customerId: cust?.id || 1,
       customerName: cust?.name || 'Walk-in Customer',
       customerMobile: cust?.mobile || '',
-      stateCode: cust?.stateCode || '33',
-      stateName: cust?.state || 'Tamil Nadu',
+      stateCode: '33',
+      stateName: 'Tamil Nadu',
       isInterstate,
       validUntil: new Date(Date.now() + validDays * 86400000).toISOString(),
       items: itemsDraft as any,

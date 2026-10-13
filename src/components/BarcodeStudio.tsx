@@ -293,7 +293,7 @@ export const BarcodeStudio: React.FC<BarcodeStudioProps> = ({ onRefreshData, onN
 
           {/* Catalog Grid */}
           <div className="flex-1 overflow-auto">
-            <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[750px]">
+            <table className="w-full text-left text-xs border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 select-none shadow-xs">
                 <tr>
                   <th className="py-1.5 px-2.5 w-10 text-center sticky top-0 z-20 bg-[#e9eef4] text-slate-700 font-bold border-b border-r border-[#cbd5e1] whitespace-nowrap">Print</th>

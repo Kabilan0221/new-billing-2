@@ -169,7 +169,16 @@ class SQLiteIndexedEngine {
       this.brands = Array.isArray(d.brands) ? d.brands : [];
       this.suppliers = Array.isArray(d.suppliers) ? d.suppliers : [];
       this.purchases = Array.isArray(d.purchases) ? d.purchases : [];
-      this.customers = Array.isArray(d.customers) ? d.customers : [];
+      this.customers = (Array.isArray(d.customers) ? d.customers : []).map((c: any) => ({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        mobile: c.mobile || '',
+        currentBalance: c.currentBalance || 0,
+        isActive: c.isActive !== undefined ? c.isActive : true,
+        createdAt: c.createdAt || new Date().toISOString(),
+        updatedAt: c.updatedAt || new Date().toISOString(),
+      }));
       this.invoices = Array.isArray(d.invoices) ? d.invoices : [];
       this.estimates = Array.isArray(d.estimates) ? d.estimates : [];
       this.stockAdjustments = Array.isArray(d.stockAdjustments) ? d.stockAdjustments : [];
@@ -445,9 +454,6 @@ class SQLiteIndexedEngine {
         code: 'CUST-WALKIN',
         name: 'Walk-in Customer',
         mobile: '9999999999',
-        city: 'Chennai',
-        state: 'Tamil Nadu',
-        stateCode: '33',
         currentBalance: 0,
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -458,9 +464,6 @@ class SQLiteIndexedEngine {
         code: 'CUST001',
         name: 'Ramesh Sundaram',
         mobile: '9840998877',
-        city: 'Madurai',
-        state: 'Tamil Nadu',
-        stateCode: '33',
         currentBalance: 0,
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -471,10 +474,6 @@ class SQLiteIndexedEngine {
         code: 'CUST002',
         name: 'Bangalore Traders',
         mobile: '9880112233',
-        gstin: '29ABCDE1234F1Z5',
-        city: 'Bengaluru',
-        state: 'Karnataka',
-        stateCode: '29',
         currentBalance: 0,
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -937,6 +936,20 @@ class SQLiteIndexedEngine {
     p.isActive = true;
     p.updatedAt = new Date().toISOString();
     this.logAudit('Product', id.toString(), 'ACTIVATE', `Re-activated product '${p.nameEn}'`);
+    if (!this.isInitializing) this.saveToLocalStorage();
+    return true;
+  }
+
+  public deleteProduct(id: number): boolean {
+    const p = this.idIndex.get(id);
+    if (!p) return false;
+    this.products = this.products.filter(item => item.id !== id);
+    this.idIndex.delete(id);
+    this.barcodeIndex.delete(p.barcode);
+    this.codeIndex.delete(p.productCode);
+    if (p.categoryId) this.categoryIndex.get(p.categoryId)?.delete(p);
+    if (p.brandId) this.brandIndex.get(p.brandId)?.delete(p);
+    this.logAudit('Product', id.toString(), 'DELETE' as any, `Deleted product '${p.nameEn}'`);
     if (!this.isInitializing) this.saveToLocalStorage();
     return true;
   }
@@ -2407,14 +2420,6 @@ class SQLiteIndexedEngine {
         ...this.customers[idx],
         name,
         mobile: cust.mobile !== undefined ? cust.mobile.trim() : this.customers[idx].mobile,
-        email: cust.email !== undefined ? cust.email.trim() : this.customers[idx].email,
-        gstin: cust.gstin !== undefined ? cust.gstin.trim().toUpperCase() : this.customers[idx].gstin,
-        address: cust.address !== undefined ? cust.address.trim() : this.customers[idx].address,
-        city: cust.city !== undefined ? cust.city.trim() : this.customers[idx].city,
-        state: cust.state !== undefined ? cust.state.trim() : this.customers[idx].state,
-        stateCode: cust.stateCode !== undefined ? cust.stateCode.trim() : this.customers[idx].stateCode,
-        creditLimit: cust.creditLimit !== undefined ? cust.creditLimit : this.customers[idx].creditLimit,
-        openingBalance: cust.openingBalance !== undefined ? cust.openingBalance : this.customers[idx].openingBalance,
         isActive: cust.isActive !== undefined ? cust.isActive : this.customers[idx].isActive,
         updatedAt: new Date().toISOString(),
       };
@@ -2428,15 +2433,7 @@ class SQLiteIndexedEngine {
         code: `CUST${this.nextCustomerId.toString().padStart(3, '0')}`,
         name,
         mobile: cust.mobile?.trim() || '',
-        email: cust.email?.trim() || '',
-        gstin: cust.gstin?.trim()?.toUpperCase() || '',
-        address: cust.address?.trim() || '',
-        city: cust.city?.trim() || 'Chennai',
-        state: cust.state?.trim() || 'Tamil Nadu',
-        stateCode: cust.stateCode?.trim() || '33',
-        openingBalance: cust.openingBalance || 0,
-        creditLimit: cust.creditLimit || 10000,
-        currentBalance: cust.openingBalance || 0,
+        currentBalance: 0,
         isActive: cust.isActive !== undefined ? cust.isActive : true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -2453,22 +2450,8 @@ class SQLiteIndexedEngine {
     if (!cust) return [];
 
     const entries: CustomerLedgerEntry[] = [];
-    let runningBalance = cust.openingBalance || 0;
+    let runningBalance = 0;
     let entryId = 1;
-
-    if (cust.openingBalance) {
-      entries.push({
-        id: entryId++,
-        customerId: cust.id,
-        transactionType: 'OPENING_BALANCE',
-        referenceNumber: 'OP-BAL',
-        description: 'Opening Balance',
-        debitAmount: cust.openingBalance > 0 ? cust.openingBalance : 0,
-        creditAmount: cust.openingBalance < 0 ? Math.abs(cust.openingBalance) : 0,
-        runningBalance,
-        transactionDate: cust.createdAt || new Date().toISOString(),
-      });
-    }
 
     const custInvoices = this.invoices
       .filter((inv) => (inv.customerId === customerId || inv.customerName === cust.name) && inv.status !== 'Cancelled')
@@ -2635,6 +2618,7 @@ class SQLiteIndexedEngine {
       customerId: inv.customerId || 1,
       customerName: inv.customerName || 'Walk-in Customer',
       customerMobile: inv.customerMobile || '',
+      customerAddress: inv.customerAddress || '',
       customerGstin: inv.customerGstin || '',
       salesperson: inv.salesperson || 'Admin',
       paymentMode: (payments.length > 0 ? payments.map((p) => p.paymentMethod).filter(Boolean).join(', ') : inv.paymentMode) || 'Cash',
@@ -3931,7 +3915,7 @@ class SQLiteIndexedEngine {
         customerCode: c.code,
         customerName: c.name,
         mobile: c.mobile || '',
-        gstin: c.gstin || '',
+        gstin: '',
         invoicesCount: custInvs.length,
         totalBilledAmount: totalBilled,
         totalPaidAmount: totalPaid,

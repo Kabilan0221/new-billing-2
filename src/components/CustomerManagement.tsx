@@ -8,10 +8,7 @@ import {
   FileSpreadsheet,
   Receipt,
   FileText,
-  CreditCard,
   Phone,
-  Mail,
-  MapPin,
   CheckCircle2,
   XCircle,
   X,
@@ -35,20 +32,12 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'invoices' | 'ledger'>('profile');
 
-  // Customer Edit/Add Modal state
+  // Customer Edit/Add Modal state (Only Name and Phone Number)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [formData, setFormData] = useState<Partial<Customer>>({
     name: '',
     mobile: '',
-    email: '',
-    gstin: '',
-    address: '',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    stateCode: '33',
-    openingBalance: 0,
-    creditLimit: 10000,
     isActive: true,
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
@@ -67,8 +56,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
       return (
         c.name.toLowerCase().includes(term) ||
         (c.mobile && c.mobile.includes(term)) ||
-        (c.code && c.code.toLowerCase().includes(term)) ||
-        (c.city && c.city.toLowerCase().includes(term))
+        (c.code && c.code.toLowerCase().includes(term))
       );
     });
   }, [customers, searchTerm, statusFilter]);
@@ -106,14 +94,6 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
     setFormData({
       name: '',
       mobile: '',
-      email: '',
-      gstin: '',
-      address: '',
-      city: 'Chennai',
-      state: 'Tamil Nadu',
-      stateCode: '33',
-      openingBalance: 0,
-      creditLimit: 10000,
       isActive: true,
     });
     setFormErrors([]);
@@ -122,7 +102,12 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
 
   const handleOpenEdit = (c: Customer) => {
     setModalMode('edit');
-    setFormData({ ...c });
+    setFormData({
+      id: c.id,
+      name: c.name,
+      mobile: c.mobile || '',
+      isActive: c.isActive,
+    });
     setFormErrors([]);
     setIsModalOpen(true);
   };
@@ -157,15 +142,8 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
     const rows = filteredCustomers.map((c) => ({
       Code: c.code,
       Name: c.name,
-      Mobile: c.mobile || '',
-      Email: c.email || '',
-      GSTIN: c.gstin || '',
-      Address: c.address || '',
-      City: c.city || '',
-      State: c.state || '',
-      'Opening Balance (₹)': c.openingBalance,
+      'Phone Number': c.mobile || '',
       'Current Balance (₹)': c.currentBalance,
-      'Credit Limit (₹)': c.creditLimit,
       Status: c.isActive ? 'Active' : 'Inactive',
     }));
 
@@ -185,10 +163,10 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-wide uppercase">
-              Customer Management & Financial Ledger (F7)
+              Customer Management & Accounts (F7)
             </h1>
             <p className="text-[11px] text-sky-100">
-              Customer records, GST profile, credit balance, transaction history, and statement ledger
+              Customer records (name and phone number), credit balance, transaction history, and statement ledger
             </p>
           </div>
         </div>
@@ -234,7 +212,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by name, mobile, code..."
+                placeholder="Search by customer name or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded text-xs focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
@@ -296,8 +274,8 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                         <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
                           <span className="font-mono">{cust.code}</span>
                           {cust.mobile && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-2.5 h-2.5" />
+                            <span className="flex items-center gap-1 text-slate-600 font-mono">
+                              <Phone className="w-2.5 h-2.5 text-[#106ebe]" />
                               {cust.mobile}
                             </span>
                           )}
@@ -329,7 +307,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
 
           {/* Outstanding Summary Footer */}
           <div className="p-2.5 bg-slate-100 border-t border-slate-200 flex justify-between items-center text-[11px]">
-            <span className="text-slate-600 font-medium">Total Customer Credit Due:</span>
+            <span className="text-slate-600 font-medium">Total Outstanding Balance:</span>
             <span className="font-bold font-mono text-rose-700">
               ₹{totalOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
@@ -361,23 +339,14 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                       {selectedCustomer.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-500 flex items-center gap-3 mt-1">
-                    {selectedCustomer.mobile && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3 text-slate-400" />
+                  <div className="text-[11px] text-slate-600 flex items-center gap-3 mt-1">
+                    {selectedCustomer.mobile ? (
+                      <span className="flex items-center gap-1 font-mono">
+                        <Phone className="w-3 h-3 text-[#106ebe]" />
                         {selectedCustomer.mobile}
                       </span>
-                    )}
-                    {selectedCustomer.gstin && (
-                      <span className="font-mono bg-sky-50 text-sky-800 px-1 rounded">
-                        GST: {selectedCustomer.gstin}
-                      </span>
-                    )}
-                    {selectedCustomer.city && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        {selectedCustomer.city}, {selectedCustomer.state}
-                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic">No phone number recorded</span>
                     )}
                   </div>
                 </div>
@@ -424,7 +393,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
             </div>
 
             {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-4 border-b border-slate-200 bg-slate-50 text-[11px] divide-x divide-slate-200">
+            <div className="grid grid-cols-3 border-b border-slate-200 bg-slate-50 text-[11px] divide-x divide-slate-200">
               <div className="p-2.5 px-4">
                 <div className="text-slate-500">Current Balance</div>
                 <div
@@ -437,13 +406,6 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                   }`}
                 >
                   ₹{selectedCustomer.currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </div>
-              </div>
-
-              <div className="p-2.5 px-4">
-                <div className="text-slate-500">Credit Limit</div>
-                <div className="text-sm font-bold font-mono text-slate-800 mt-0.5">
-                  ₹{(selectedCustomer.creditLimit ?? 10000).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
 
@@ -468,7 +430,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
             {/* Tabs Navigation */}
             <div className="border-b border-slate-200 px-4 bg-white flex gap-6">
               {[
-                { key: 'profile', label: 'Profile & Tax Info', icon: Users },
+                { key: 'profile', label: 'Customer Details', icon: Users },
                 { key: 'invoices', label: `Invoices History (${customerInvoices.length})`, icon: Receipt },
                 { key: 'ledger', label: `Financial Statement Ledger (${customerLedger.length})`, icon: FileText },
               ].map((tab) => {
@@ -494,40 +456,44 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
             {/* Tab Contents */}
             <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
               {activeTab === 'profile' && (
-                <div className="bg-white rounded border border-slate-200 p-5 max-w-3xl space-y-4">
-                  <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-2">
-                    Commercial & Billing Information
-                  </h3>
+                <div className="bg-white rounded border border-slate-200 p-5 max-w-xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      Customer Information
+                    </h3>
+                    <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                      Name & Phone Only
+                    </span>
+                  </div>
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
                       <span className="text-slate-500">Customer Name:</span>
-                      <div className="font-semibold text-slate-900 mt-0.5">{selectedCustomer.name}</div>
+                      <div className="font-semibold text-slate-900 mt-1 text-sm">{selectedCustomer.name}</div>
                     </div>
                     <div>
                       <span className="text-slate-500">Customer Code:</span>
-                      <div className="font-mono text-slate-900 mt-0.5">{selectedCustomer.code}</div>
+                      <div className="font-mono text-slate-900 mt-1">{selectedCustomer.code}</div>
                     </div>
                     <div>
-                      <span className="text-slate-500">Primary Mobile:</span>
-                      <div className="font-mono text-slate-900 mt-0.5">{selectedCustomer.mobile || '—'}</div>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Email Address:</span>
-                      <div className="text-slate-900 mt-0.5">{selectedCustomer.email || '—'}</div>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">GSTIN Number:</span>
-                      <div className="font-mono text-slate-900 mt-0.5">{selectedCustomer.gstin || 'Unregistered'}</div>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">State / State Code:</span>
-                      <div className="text-slate-900 mt-0.5">
-                        {selectedCustomer.state || 'Tamil Nadu'} (Code: {selectedCustomer.stateCode || '33'})
+                      <span className="text-slate-500">Phone Number:</span>
+                      <div className="font-mono font-semibold text-slate-900 mt-1 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-[#106ebe]" />
+                        {selectedCustomer.mobile || '—'}
                       </div>
                     </div>
-                    <div className="col-span-2">
-                      <span className="text-slate-500">Full Billing Address:</span>
-                      <div className="text-slate-900 mt-0.5">{selectedCustomer.address || '—'}</div>
+                    <div>
+                      <span className="text-slate-500">Account Status:</span>
+                      <div className="mt-1">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            selectedCustomer.isActive
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {selectedCustomer.isActive ? 'Active Customer' : 'Inactive'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -607,7 +573,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                       {customerLedger.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="p-6 text-center text-slate-400">
-                            No ledger transactions found. Opening balance: ₹{selectedCustomer.openingBalance || 0}
+                            No ledger transactions found. Current balance: ₹{selectedCustomer.currentBalance || 0}
                           </td>
                         </tr>
                       ) : (
@@ -644,10 +610,10 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
         )}
       </div>
 
-      {/* Add / Edit Customer Modal */}
+      {/* Add / Edit Customer Modal (Name and Phone Number only) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl border border-slate-300 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-300 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95">
             <div className="bg-[#1f4e79] text-white px-4 py-3 flex items-center justify-between">
               <h3 className="font-bold text-sm">
                 {modalMode === 'add' ? 'Add New Customer' : `Edit Customer — ${formData.name}`}
@@ -669,8 +635,8 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="space-y-3">
+                <div>
                   <label className="block text-slate-600 font-semibold mb-1">Customer Name *</label>
                   <input
                     type="text"
@@ -678,81 +644,19 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                     value={formData.name || ''}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
-                    placeholder="Enter customer or company name"
+                    placeholder="Enter customer name"
+                    autoFocus
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-600 font-semibold mb-1">Mobile Number</label>
+                  <label className="block text-slate-600 font-semibold mb-1">Phone Number</label>
                   <input
-                    type="text"
+                    type="tel"
                     value={formData.mobile || ''}
                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
-                    placeholder="10-digit mobile"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-semibold mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
-                    placeholder="email@example.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-semibold mb-1">GSTIN</label>
-                  <input
-                    type="text"
-                    value={formData.gstin || ''}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden font-mono uppercase"
-                    placeholder="33AAAAA0000A1Z5"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-semibold mb-1">Credit Limit (₹)</label>
-                  <input
-                    type="number"
-                    value={formData.creditLimit || 0}
-                    onChange={(e) => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || 0 })}
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden font-mono"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="block text-slate-600 font-semibold mb-1">Address</label>
-                  <input
-                    type="text"
-                    value={formData.address || ''}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
-                    placeholder="Door #, Street, Area"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-semibold mb-1">City</label>
-                  <input
-                    type="text"
-                    value={formData.city || ''}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 font-semibold mb-1">State</label>
-                  <input
-                    type="text"
-                    value={formData.state || ''}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden"
+                    placeholder="10-digit mobile number"
                   />
                 </div>
               </div>
@@ -761,13 +665,13 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100"
+                  className="px-3 py-1.5 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#115ea3] text-white font-semibold rounded flex items-center gap-1.5"
+                  className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#115ea3] text-white font-semibold rounded flex items-center gap-1.5 shadow-xs"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{modalMode === 'add' ? 'Create Customer' : 'Save Changes'}</span>

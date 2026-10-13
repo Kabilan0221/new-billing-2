@@ -17,6 +17,9 @@ export interface Product {
   wholesaleRate: number;
   mrp: number;
   taxRate: number;
+  sgstRate?: number;
+  cgstRate?: number;
+  igstRate?: number;
   openingStock: number;
   currentStock: number;
   reorderLevel: number;
@@ -314,14 +317,6 @@ export interface Customer {
   code: string;
   name: string;
   mobile?: string;
-  email?: string;
-  gstin?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  stateCode?: string;
-  openingBalance?: number;
-  creditLimit?: number;
   currentBalance: number;
   isActive: boolean;
   createdAt: string;
@@ -387,6 +382,7 @@ export interface InvoiceHeader {
   customerId: number;
   customerName: string;
   customerMobile?: string;
+  customerAddress?: string;
   customerGstin?: string;
   salesperson: string;
   paymentMode?: string;

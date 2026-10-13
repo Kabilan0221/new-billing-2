@@ -538,143 +538,125 @@ export const InboundGoods: React.FC<InboundGoodsProps> = ({
             </div>
           </div>
 
-          {/* 2. Purchase Header Form Grid */}
-          <div className="bg-[#fafbfc] border-b border-[#d8e2ec] p-3 text-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
-              <div>
-                <label className="block text-slate-600 font-bold mb-1">Purchase #</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={purchaseNumber}
-                  className="w-full px-2 py-1.5 bg-slate-100 border border-slate-300 rounded font-mono font-bold text-blue-900"
-                />
+          {/* 2. Purchase Header & Supplier Section - Single Line */}
+          <div className="bg-[#fafbfc] border-b border-[#d8e2ec] px-3 py-2 text-xs">
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+              {/* Purchase # */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-slate-500 font-bold text-[11px]">PO #:</span>
+                <span className="px-2 py-1 bg-slate-100 border border-slate-300 rounded font-mono font-bold text-blue-900 text-xs">
+                  {purchaseNumber}
+                </span>
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-slate-700 font-bold mb-1">
-                  Supplier <span className="text-rose-500">*</span>
+              {/* Supplier Dropdown */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <label className="text-slate-700 font-bold text-xs flex items-center gap-0.5">
+                  <span>Supplier:</span>
+                  <span className="text-rose-500">*</span>
                 </label>
                 <select
                   disabled={status === 'Confirmed' || status === 'Cancelled'}
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded font-semibold focus:outline-hidden focus:border-blue-500"
+                  className="px-2 py-1 bg-white border border-slate-300 rounded font-semibold text-xs min-w-[190px] max-w-[260px] focus:outline-hidden focus:border-blue-500"
                 >
                   <option value="">-- Select Supplier --</option>
                   {db.getAllActiveSuppliers().map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.code}) — {s.city || s.state}
+                      {s.name} ({s.code}) {s.mobile ? `· 📞 ${s.mobile}` : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-slate-600 font-medium mb-1">Supplier Inv #</label>
+              {/* Supplier Inv # */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-slate-600 font-medium text-[11px]">Inv #:</span>
                 <input
                   type="text"
                   disabled={status === 'Confirmed' || status === 'Cancelled'}
                   value={supplierInvoiceNumber}
                   onChange={(e) => setSupplierInvoiceNumber(e.target.value)}
-                  placeholder="INV-9981"
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded font-mono focus:outline-hidden focus:border-blue-500"
+                  placeholder="Bill #"
+                  className="w-24 px-2 py-1 bg-white border border-slate-300 rounded font-mono text-xs focus:outline-hidden focus:border-blue-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-600 font-medium mb-1">Invoice Date</label>
+              {/* Invoice Date */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-slate-600 font-medium text-[11px]">Date:</span>
                 <input
                   type="date"
                   disabled={status === 'Confirmed' || status === 'Cancelled'}
                   value={supplierInvoiceDate}
                   onChange={(e) => setSupplierInvoiceDate(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded focus:outline-hidden focus:border-blue-500"
+                  className="px-1.5 py-1 bg-white border border-slate-300 rounded text-xs focus:outline-hidden focus:border-blue-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-600 font-bold mb-1">Goods Received Date</label>
+              {/* Goods Received Date */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-slate-600 font-medium text-[11px]">Received:</span>
                 <input
                   type="date"
                   disabled={status === 'Confirmed' || status === 'Cancelled'}
                   value={goodsReceivedDate}
                   onChange={(e) => setGoodsReceivedDate(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded font-semibold focus:outline-hidden focus:border-blue-500"
+                  className="px-1.5 py-1 bg-white border border-slate-300 rounded text-xs focus:outline-hidden focus:border-blue-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-600 font-bold mb-1">Payment Mode</label>
+              {/* Payment Mode */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-slate-600 font-bold text-[11px]">Pay:</span>
                 <select
                   disabled={status === 'Confirmed' || status === 'Cancelled'}
                   value={purchaseType}
                   onChange={(e) => setPurchaseType(e.target.value as any)}
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded font-semibold focus:outline-hidden focus:border-blue-500"
+                  className="px-2 py-1 bg-white border border-slate-300 rounded font-semibold text-xs focus:outline-hidden focus:border-blue-500"
                 >
-                  <option value="Credit">Credit (Pay Later)</option>
-                  <option value="Cash">Cash (Immediate Paid)</option>
+                  <option value="Credit">Credit</option>
+                  <option value="Cash">Cash</option>
                 </select>
               </div>
 
+              {/* Due Date if credit */}
               {purchaseType === 'Credit' && (
-                <div>
-                  <label className="block text-slate-600 font-medium mb-1">Due Date</label>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-slate-600 font-medium text-[11px]">Due:</span>
                   <input
                     type="date"
                     disabled={status === 'Confirmed' || status === 'Cancelled'}
                     value={paymentDueDate}
                     onChange={(e) => setPaymentDueDate(e.target.value)}
-                    className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded focus:outline-hidden focus:border-blue-500"
+                    className="px-1.5 py-1 bg-white border border-slate-300 rounded text-xs focus:outline-hidden focus:border-blue-500"
                   />
                 </div>
               )}
 
-              <div>
-                <label className="block text-slate-600 font-medium mb-1">E-Way / Challan Ref</label>
-                <input
-                  type="text"
-                  disabled={status === 'Confirmed' || status === 'Cancelled'}
-                  value={referenceNumber}
-                  onChange={(e) => setReferenceNumber(e.target.value)}
-                  placeholder="EWAY-881290"
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded font-mono focus:outline-hidden focus:border-blue-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-slate-600 font-medium mb-1">Remarks / Delivery Notes</label>
+              {/* Remarks / Ref input */}
+              <div className="flex items-center gap-1 flex-1 min-w-[140px]">
                 <input
                   type="text"
                   disabled={status === 'Confirmed' || status === 'Cancelled'}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Received via VRL Logistics, batch intact..."
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded focus:outline-hidden focus:border-blue-500"
+                  placeholder="Remarks / Challan / Delivery notes..."
+                  className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs focus:outline-hidden focus:border-blue-500"
                 />
               </div>
-            </div>
 
-            {/* Supplier Quick Details Tag */}
-            {currentSupplier && (
-              <div className="mt-2 pt-2 border-t border-slate-200 flex flex-wrap items-center gap-4 text-[11px] text-slate-600">
-                <span>
-                  GSTIN: <strong className="font-mono text-slate-800">{currentSupplier.gstin || 'Unregistered'}</strong>
-                </span>
-                <span>
-                  Phone: <strong className="font-mono text-slate-800">{currentSupplier.mobile || '—'}</strong>
-                </span>
-                <span>
-                  Payment Terms: <strong className="text-slate-800">{currentSupplier.paymentTerms}</strong>
-                </span>
-                <span className="ml-auto">
-                  Current Outstanding Payable:{' '}
-                  <strong className={`font-mono font-bold ${currentSupplier.currentBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+              {/* Supplier Outstanding Balance indicator */}
+              {currentSupplier && (
+                <div className="flex items-center gap-1.5 shrink-0 pl-2 border-l border-slate-300 text-[11px]">
+                  <span className="text-slate-500">Bal:</span>
+                  <span className={`font-mono font-bold ${currentSupplier.currentBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
                     ₹{currentSupplier.currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </strong>
-                </span>
-              </div>
-            )}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 3. Product Line Item Fast Entry Strip */}
@@ -824,7 +806,7 @@ export const InboundGoods: React.FC<InboundGoodsProps> = ({
           {/* 4. Line Items Grid */}
           <div className="flex-1 flex overflow-hidden">
             <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-separate border-spacing-0 min-w-[950px]">
+              <table className="w-full text-left text-xs border-separate border-spacing-0">
                 <thead className="sticky top-0 z-20 select-none shadow-xs">
                   <tr>
                     <th className="py-2 px-2 sticky top-0 z-20 bg-[#1f4e79] text-white border-b border-r border-blue-900/60 w-10 text-center whitespace-nowrap">#</th>

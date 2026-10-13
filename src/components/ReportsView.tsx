@@ -521,7 +521,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
       {/* Main Grid Content Area with Clean Sticky Headers (No Overlap) */}
       <div className="flex-1 overflow-auto bg-white">
         {reportType === 'sales' && (
-          <table className="min-w-[1150px] w-full text-left text-xs border-separate border-spacing-0">
+          <table className="w-full text-left text-xs border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Invoice #</th>
@@ -570,7 +570,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'product_sales' && (
-          <table className="min-w-[1150px] w-full text-left text-xs border-separate border-spacing-0">
+          <table className="w-full text-left text-xs border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Product Code</th>
@@ -611,7 +611,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'purchases' && (
-          <table className="min-w-[1200px] w-full text-left text-xs border-separate border-spacing-0">
+          <table className="w-full text-left text-xs border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Purchase #</th>
@@ -656,7 +656,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'stock' && (
-          <table className="min-w-[1250px] w-full text-left text-xs border-separate border-spacing-0">
+          <table className="w-full text-left text-xs border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Product Code</th>
@@ -713,13 +713,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'customers' && (
-          <table className="min-w-[1100px] w-full text-left text-xs border-separate border-spacing-0">
+          <table className="w-full text-left text-xs border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Code</th>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Customer Name</th>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Mobile</th>
-                <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">GSTIN</th>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-center">Invoices</th>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Total Billed</th>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap text-right">Total Paid</th>
@@ -729,7 +728,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
             <tbody>
               {customerRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
                     No customer accounts found.
                   </td>
                 </tr>
@@ -739,7 +738,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
                     <td className="py-2.5 px-3 font-semibold text-indigo-700 border-b border-r border-slate-100 whitespace-nowrap">{r.customerCode}</td>
                     <td className="py-2.5 px-3 font-medium text-slate-900 border-b border-r border-slate-100 whitespace-nowrap">{r.customerName}</td>
                     <td className="py-2.5 px-3 text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">{r.mobile || '-'}</td>
-                    <td className="py-2.5 px-3 text-slate-600 font-mono border-b border-r border-slate-100 whitespace-nowrap">{r.gstin || '-'}</td>
                     <td className="py-2.5 px-3 text-center border-b border-r border-slate-100 whitespace-nowrap">{r.invoicesCount}</td>
                     <td className="py-2.5 px-3 text-right text-slate-600 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalBilledAmount.toFixed(2)}</td>
                     <td className="py-2.5 px-3 text-right text-emerald-700 border-b border-r border-slate-100 whitespace-nowrap">₹{r.totalPaidAmount.toFixed(2)}</td>
@@ -754,7 +752,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onRefreshData }) => {
         )}
 
         {reportType === 'payments' && (
-          <table className="min-w-[1000px] w-full text-left text-xs border-separate border-spacing-0">
+          <table className="w-full text-left text-xs border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 shadow-xs">
               <tr>
                 <th className="sticky top-0 z-20 bg-slate-100 text-slate-800 font-bold py-2.5 px-3 border-b border-r border-slate-300 whitespace-nowrap">Receipt ID</th>
