@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { Win7TitleBar } from './components/Win7TitleBar';
+import { X } from 'lucide-react';
 import { Win7Sidebar, SIDEBAR_ITEMS } from './components/Win7Sidebar';
 import { ProductMaster } from './components/ProductMaster';
 import { ProductDialog } from './components/ProductDialog';
@@ -153,32 +153,63 @@ export default function App() {
   };
 
   return (
-    <div className="w-screen h-screen bg-[#1c304a] flex items-center justify-center p-0 md:p-2 overflow-hidden font-sans">
-      {/* Windows 7 Aero Shell Container */}
-      <div className="w-full h-full max-w-[1600px] bg-white rounded-lg shadow-2xl border border-[#4572a7] flex flex-col overflow-hidden">
-        {/* Win7 Title Bar with View Mode Switcher */}
-        <Win7TitleBar
-          title="ShopBilling — Commercial Retail & Inventory Suite (Windows 7 SP1 · .NET 4.8 · SQLite)"
-          activeView={activeView}
-          onToggleView={setActiveView}
-          is50kLoaded={metrics.is50kLoaded}
-        />
+    <div className="w-screen h-screen bg-white flex flex-col overflow-hidden font-sans">
+      {/* Header Store Banner */}
+      <div className="bg-[#182b49] text-white px-4 py-2 flex flex-wrap items-center justify-between border-b border-[#122035] text-xs shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="font-bold tracking-wider text-amber-300">SRI MURUGAN SUPER MARKET</span>
+          <span className="hidden sm:inline text-slate-400">|</span>
+          <span className="text-slate-300 hidden sm:inline">124 Bazaar Road, Chennai - 600017</span>
+          <span className="hidden sm:inline text-slate-400">|</span>
+          <span className="text-slate-300 font-mono text-[11px]">GSTIN: 33AAAAA0000A1Z5</span>
+        </div>
 
-        {/* Sub-Header Store Banner */}
-        <div className="bg-[#182b49] text-white px-4 py-2 flex flex-wrap items-center justify-between border-b border-[#122035] text-xs">
-          <div className="flex items-center gap-3">
-            <span className="font-bold tracking-wider text-amber-300">SRI MURUGAN SUPER MARKET</span>
-            <span className="hidden sm:inline text-slate-400">|</span>
-            <span className="text-slate-300 hidden sm:inline">124 Bazaar Road, Chennai - 600017</span>
-            <span className="hidden sm:inline text-slate-400">|</span>
-            <span className="text-slate-300 font-mono text-[11px]">GSTIN: 33AAAAA0000A1Z5</span>
-          </div>
+        <div className="flex items-center gap-2 text-slate-300">
+          <span className="font-mono text-slate-300 text-[11px] hidden md:inline mr-1">{currentTime}</span>
+          <div className="h-4 w-[1px] bg-slate-600/80 mx-1" />
+          <div className="flex items-center -mr-2">
+            {/* Minimize (-) */}
+            <button
+              type="button"
+              title="Minimize"
+              className="w-10 h-7 flex items-center justify-center hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <span className="w-2.5 h-[1.5px] bg-white inline-block"></span>
+            </button>
 
-          <div className="flex items-center gap-3 text-slate-300 text-[11px]">
-            <span className="font-mono bg-white/10 px-2 py-0.5 rounded">Terminal #01 (Offline)</span>
-            <span className="text-emerald-400 font-medium">SQLite WAL Active</span>
+            {/* Maximize / Restore (❐) */}
+            <button
+              type="button"
+              title="Maximize / Restore"
+              onClick={() => {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen?.().catch(() => {});
+                } else {
+                  document.exitFullscreen?.().catch(() => {});
+                }
+              }}
+              className="w-10 h-7 flex items-center justify-center hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <rect x="4.5" y="1.5" width="9.5" height="9.5" rx="1" />
+                <path d="M11.5 4.5H2.5C1.94772 4.5 1.5 4.94772 1.5 5.5V14.5C1.5 15.0523 1.94772 15.5 2.5 15.5H11.5C12.0523 15.5 12.5 15.0523 12.5 14.5V11.5" />
+              </svg>
+            </button>
+
+            {/* Close (✕) */}
+            <button
+              type="button"
+              title="Close"
+              onClick={() => {
+                setActiveNav('pos');
+              }}
+              className="w-10 h-7 flex items-center justify-center hover:bg-[#e81123] text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
+      </div>
 
         {/* Main Application Area */}
         {activeView === 'desktop' ? (
@@ -314,62 +345,6 @@ export default function App() {
           /* Visual Studio Solution & C# Source Explorer View */
           <SolutionExplorer />
         )}
-
-        {/* Windows 7 Status Strip at Bottom */}
-        <footer className="bg-[#f0f0f0] border-t border-[#d0d0d0] px-3 py-1 flex items-center justify-between text-[11px] text-slate-600 select-none">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Database: SQLite 3.39 (WAL Mode, FK Active)</span>
-            </span>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <span className="hidden sm:inline">
-              Catalog: <strong>{metrics.total.toLocaleString()}</strong> items
-            </span>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <span className="hidden sm:inline">
-              Suppliers: <strong>{metrics.totalSuppliers}</strong> active
-            </span>
-            <span className="hidden sm:inline text-blue-900 font-medium">
-              Stock In Hand: <strong>{metrics.totalStockQuantity.toLocaleString()}</strong> units (₹{metrics.stockValueAtCost.toLocaleString('en-IN', { minimumFractionDigits: 0 })})
-            </span>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <span className="hidden sm:inline text-emerald-800 font-semibold">
-              Confirmed Bills: <strong>{metrics.totalInvoices}</strong> (₹{metrics.totalSalesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })})
-            </span>
-            {metrics.pendingDrafts > 0 && (
-              <>
-                <span className="hidden sm:inline text-slate-300">|</span>
-                <span className="text-amber-700 font-semibold">
-                  Inbound Drafts: {metrics.pendingDrafts}
-                </span>
-              </>
-            )}
-            {metrics.totalPayableToSuppliers > 0 && (
-              <>
-                <span className="hidden sm:inline text-slate-300">|</span>
-                <span className="text-rose-700 font-semibold">
-                  Vendor Payable: ₹{metrics.totalPayableToSuppliers.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
-              </>
-            )}
-            {metrics.lowStock > 0 && (
-              <>
-                <span className="hidden sm:inline text-slate-300">|</span>
-                <span className="text-rose-600 font-semibold">
-                  Low Stock: {metrics.lowStock.toLocaleString()}
-                </span>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 font-mono shrink-0">
-            <span>Windows 7 SP1 (.NET 4.8)</span>
-            <span className="text-slate-300">|</span>
-            <span>{currentTime}</span>
-          </div>
-        </footer>
-      </div>
 
       {/* Modals & Dialogs */}
       <ProductDialog

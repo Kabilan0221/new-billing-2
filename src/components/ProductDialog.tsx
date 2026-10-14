@@ -7,7 +7,9 @@ interface ProductDialogProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (product?: Product) => void;
+  title?: string;
+  submitButtonText?: string;
 }
 
 export const ProductDialog: React.FC<ProductDialogProps> = ({
@@ -15,6 +17,8 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
   isOpen,
   onClose,
   onSaved,
+  title,
+  submitButtonText,
 }) => {
   const [productCode, setProductCode] = useState('');
   const [barcode, setBarcode] = useState('');
@@ -151,7 +155,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
       return;
     }
 
-    onSaved();
+    onSaved(res.product);
     onClose();
   };
 
@@ -167,7 +171,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
               ✓
             </div>
             <h3 className="text-xs font-semibold tracking-wide">
-              {product ? `Edit Product — ${product.productCode}` : 'Product Master — New Product Creation'}
+              {title || (product ? `Edit Product — ${product.productCode}` : 'Product Master — New Product Creation')}
             </h3>
           </div>
           <button
@@ -400,6 +404,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
                   onChange={(e) => setSaleRate(parseFloat(e.target.value) || 0)}
                   className="w-full px-2.5 py-1.5 bg-white border-2 border-[#106ebe] rounded font-mono font-bold text-slate-900 focus:outline-none"
                 />
+                <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">Final Rate (GST Incl.)</span>
               </div>
 
               <div>
@@ -424,6 +429,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
                   onChange={(e) => setMrp(parseFloat(e.target.value) || 0)}
                   className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded font-mono focus:border-[#106ebe] focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-500 font-medium block mt-0.5">Max Retail Price</span>
               </div>
 
               <div>
@@ -510,7 +516,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
               className="px-5 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded font-semibold shadow-xs flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
-              <span>Save Product (F2)</span>
+              <span>{submitButtonText || 'Save Product (F2)'}</span>
             </button>
           </div>
         </form>

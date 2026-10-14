@@ -317,6 +317,12 @@ export interface Customer {
   code: string;
   name: string;
   mobile?: string;
+  email?: string;
+  gstin?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  stateCode?: string;
   currentBalance: number;
   isActive: boolean;
   createdAt: string;
@@ -343,6 +349,7 @@ export interface InvoiceItem {
   barcode: string;
   productName: string;
   unit: string;
+  mrp?: number;
   quantity: number;
   rate: number;
   discountPercent: number;
@@ -403,6 +410,7 @@ export interface InvoiceHeader {
   roundOff: number;
   grandTotal: number;
   amountPaid: number;
+  paidAmount?: number;
   balanceDue: number;
   cashChange?: number;
   estimateId?: number;

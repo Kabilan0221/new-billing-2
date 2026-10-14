@@ -920,6 +920,10 @@ class SQLiteIndexedEngine {
     }
   }
 
+  public insertProduct(product: Partial<Product>): { success: boolean; errors: string[]; product?: Product } {
+    return this.saveProduct(product);
+  }
+
   public deactivateProduct(id: number): boolean {
     const p = this.idIndex.get(id);
     if (!p) return false;
@@ -2508,6 +2512,7 @@ class SQLiteIndexedEngine {
     const items: InvoiceItem[] = (inv.items || []).map((it, idx) => {
       const qty = Math.max(0, Number(it.quantity) || 0);
       const rate = Math.max(0, Number(it.rate) || 0);
+      const mrp = it.mrp !== undefined ? Number(it.mrp) : rate;
       const lineGross = Math.round(qty * rate * 100) / 100;
       let discPercent = Math.max(0, Math.min(100, Number(it.discountPercent) || 0));
       let discAmt = Math.max(0, Number(it.discountAmount) || 0);
@@ -2518,31 +2523,55 @@ class SQLiteIndexedEngine {
       }
       if (discAmt > lineGross) discAmt = lineGross;
 
-      const taxable = Math.max(0, Math.round((lineGross - discAmt) * 100) / 100);
+      // Rate is the final price! Tax is extracted backwards from lineNet
+      const lineNet = Math.max(0, Math.round((lineGross - discAmt) * 100) / 100);
       const taxRate = Math.max(0, Number(it.taxRate) || 0);
 
       let cgstRate = 0;
-      let cgstAmount = 0;
       let sgstRate = 0;
-      let sgstAmount = 0;
       let igstRate = 0;
-      let igstAmount = 0;
-      let taxAmount = 0;
 
-      if (isInterstate) {
+      if (it.cgstRate !== undefined || it.sgstRate !== undefined || it.igstRate !== undefined) {
+        cgstRate = Math.max(0, Number(it.cgstRate) || 0);
+        sgstRate = Math.max(0, Number(it.sgstRate) || 0);
+        igstRate = Math.max(0, Number(it.igstRate) || 0);
+      } else if (isInterstate) {
         igstRate = taxRate;
-        igstAmount = Math.round(taxable * (taxRate / 100) * 100) / 100;
-        taxAmount = igstAmount;
       } else {
         const halfRate = taxRate / 2;
         cgstRate = halfRate;
-        cgstAmount = Math.round(taxable * (halfRate / 100) * 100) / 100;
         sgstRate = halfRate;
-        sgstAmount = Math.round(taxable * (halfRate / 100) * 100) / 100;
-        taxAmount = Math.round((cgstAmount + sgstAmount) * 100) / 100;
       }
 
-      const lineTotal = Math.round((taxable + taxAmount) * 100) / 100;
+      const effectiveTaxRate = Math.round((cgstRate + sgstRate + igstRate) * 100) / 100;
+
+      let taxable = lineNet;
+      let taxAmount = 0;
+      let cgstAmount = 0;
+      let sgstAmount = 0;
+      let igstAmount = 0;
+
+      if (effectiveTaxRate > 0) {
+        // Back-calculate taxable from tax-inclusive final price
+        taxable = Math.round((lineNet / (1 + effectiveTaxRate / 100)) * 100) / 100;
+        taxAmount = Math.round((lineNet - taxable) * 100) / 100;
+        if (igstRate > 0 && cgstRate === 0 && sgstRate === 0) {
+          igstAmount = taxAmount;
+          cgstAmount = 0;
+          sgstAmount = 0;
+        } else if (cgstRate > 0 && sgstRate > 0 && igstRate === 0) {
+          cgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+          sgstAmount = Math.round((taxAmount - cgstAmount) * 100) / 100;
+          igstAmount = 0;
+        } else {
+          cgstAmount = Math.round((taxAmount * (cgstRate / effectiveTaxRate)) * 100) / 100;
+          sgstAmount = Math.round((taxAmount * (sgstRate / effectiveTaxRate)) * 100) / 100;
+          igstAmount = Math.max(0, Math.round((taxAmount - cgstAmount - sgstAmount) * 100) / 100);
+        }
+      }
+
+      // Line Total is the final net price (Rate * Qty - disc)
+      const lineTotal = lineNet;
 
       return {
         id: it.id || idx + 1,
@@ -2552,11 +2581,12 @@ class SQLiteIndexedEngine {
         barcode: it.barcode || '',
         productName: it.productName || '',
         unit: it.unit || 'PCS',
+        mrp,
         quantity: qty,
         rate,
         discountPercent: discPercent,
         discountAmount: discAmt,
-        taxRate,
+        taxRate: effectiveTaxRate,
         taxableAmount: taxable,
         cgstRate,
         cgstAmount,
@@ -2573,11 +2603,10 @@ class SQLiteIndexedEngine {
     const grossAmount = Math.round(items.reduce((sum, it) => sum + (it.quantity * it.rate), 0) * 100) / 100;
     const itemDiscount = Math.round(items.reduce((sum, it) => sum + it.discountAmount, 0) * 100) / 100;
     const totalTaxable = Math.round(items.reduce((sum, it) => sum + it.taxableAmount, 0) * 100) / 100;
+    const totalTaxAmount = Math.round(items.reduce((sum, it) => sum + it.taxAmount, 0) * 100) / 100;
 
     let billDiscount = Math.max(0, Number(inv.billDiscount) || 0);
-    if (billDiscount > totalTaxable) billDiscount = totalTaxable;
-
-    const netTaxable = Math.max(0, Math.round((totalTaxable - billDiscount) * 100) / 100);
+    const otherCharges = Math.max(0, Number(inv.otherCharges) || 0);
 
     const baseCgst = items.reduce((sum, it) => sum + it.cgstAmount, 0);
     const baseSgst = items.reduce((sum, it) => sum + it.sgstAmount, 0);
@@ -2587,17 +2616,8 @@ class SQLiteIndexedEngine {
     let sgstAmount = baseSgst;
     let igstAmount = baseIgst;
 
-    if (billDiscount > 0 && totalTaxable > 0) {
-      const ratio = netTaxable / totalTaxable;
-      cgstAmount = Math.round(baseCgst * ratio * 100) / 100;
-      sgstAmount = Math.round(baseSgst * ratio * 100) / 100;
-      igstAmount = Math.round(baseIgst * ratio * 100) / 100;
-    }
-
-    const totalTaxAmount = Math.round((cgstAmount + sgstAmount + igstAmount) * 100) / 100;
-    const otherCharges = Math.max(0, Number(inv.otherCharges) || 0);
-
-    const preRound = netTaxable + totalTaxAmount + otherCharges;
+    const itemsTotal = items.reduce((sum, it) => sum + it.lineTotal, 0);
+    const preRound = Math.max(0, itemsTotal - billDiscount + otherCharges);
     const grandTotal = Math.round(preRound);
     const roundOff = Math.round((grandTotal - preRound) * 100) / 100;
 
@@ -2630,7 +2650,7 @@ class SQLiteIndexedEngine {
       grossAmount,
       itemDiscount,
       billDiscount,
-      taxableAmount: netTaxable,
+      taxableAmount: totalTaxable,
       cgstAmount,
       sgstAmount,
       igstAmount,
@@ -2639,6 +2659,7 @@ class SQLiteIndexedEngine {
       roundOff,
       grandTotal,
       amountPaid,
+      paidAmount: amountPaid,
       balanceDue,
       cashChange,
       notes: inv.notes || '',

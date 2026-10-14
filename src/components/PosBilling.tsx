@@ -39,6 +39,8 @@ import {
   PackagePlus,
 } from 'lucide-react';
 import { db } from '../services/dbEngine';
+import { playScannerBeep } from '../services/soundEffects';
+import { ProductDialog } from './ProductDialog';
 import {
   Product,
   Customer,
@@ -101,7 +103,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQty, setSearchQty] = useState(1);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLFormElement>(null);
 
   // Close search popover when clicking outside
   useEffect(() => {
@@ -136,22 +138,14 @@ export const PosBilling: React.FC<PosBillingProps> = ({
 
   // Camera & Quick Add State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraManualBarcode, setCameraManualBarcode] = useState('');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
 
-  // Quick Add Product Form State
-  const [quickNameEn, setQuickNameEn] = useState('');
-  const [quickNameTa, setQuickNameTa] = useState('');
-  const [quickBarcode, setQuickBarcode] = useState('');
-  const [quickSaleRate, setQuickSaleRate] = useState<number | ''>('');
-  const [quickMrp, setQuickMrp] = useState<number | ''>('');
-  const [quickPurRate, setQuickPurRate] = useState<number | ''>('');
-  const [quickTaxRate, setQuickTaxRate] = useState<number>(5);
-  const [quickStock, setQuickStock] = useState<number>(100);
-  const [quickUnit, setQuickUnit] = useState('PCS');
-  const [quickCategoryId, setQuickCategoryId] = useState<number>(1);
-  const allCategories = useMemo(() => db.getCategories(), []);
+  // Click & shortcut timers for F9 and Checkout button (single vs double click)
+  const checkoutClickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastF9PressRef = useRef<number>(0);
 
   // -------------------------------------------------------------
   // BILL HISTORY STATE
@@ -270,19 +264,21 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       const next = [...prev];
       const it = { ...next[index] };
       it.quantity = qty;
-      const gross = it.quantity * it.rate;
-      it.discountAmount = Math.round(((gross * it.discountPercent) / 100) * 100) / 100;
-      it.taxableAmount = Math.max(0, gross - it.discountAmount);
+      const lineGross = it.quantity * it.rate;
+      it.discountAmount = Math.round(((lineGross * it.discountPercent) / 100) * 100) / 100;
+      const lineNet = Math.max(0, lineGross - it.discountAmount);
       if (it.taxRate > 0) {
-        it.taxAmount = Math.round(((it.taxableAmount * it.taxRate) / 100) * 100) / 100;
+        it.taxableAmount = Math.round((lineNet / (1 + it.taxRate / 100)) * 100) / 100;
+        it.taxAmount = Math.round((lineNet - it.taxableAmount) * 100) / 100;
         it.cgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
-        it.sgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+        it.sgstAmount = Math.round((it.taxAmount - it.cgstAmount) * 100) / 100;
       } else {
+        it.taxableAmount = lineNet;
         it.taxAmount = 0;
         it.cgstAmount = 0;
         it.sgstAmount = 0;
       }
-      it.lineTotal = Math.round((it.taxableAmount + it.taxAmount) * 100) / 100;
+      it.lineTotal = lineNet;
       next[index] = it;
       return next;
     });
@@ -294,20 +290,30 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       const next = [...prev];
       const it = { ...next[index] };
       it.rate = rate;
-      const gross = it.quantity * it.rate;
-      it.discountAmount = Math.round(((gross * it.discountPercent) / 100) * 100) / 100;
-      it.taxableAmount = Math.max(0, gross - it.discountAmount);
+      const lineGross = it.quantity * it.rate;
+      it.discountAmount = Math.round(((lineGross * it.discountPercent) / 100) * 100) / 100;
+      const lineNet = Math.max(0, lineGross - it.discountAmount);
       if (it.taxRate > 0) {
-        it.taxAmount = Math.round(((it.taxableAmount * it.taxRate) / 100) * 100) / 100;
+        it.taxableAmount = Math.round((lineNet / (1 + it.taxRate / 100)) * 100) / 100;
+        it.taxAmount = Math.round((lineNet - it.taxableAmount) * 100) / 100;
         it.cgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
-        it.sgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+        it.sgstAmount = Math.round((it.taxAmount - it.cgstAmount) * 100) / 100;
       } else {
+        it.taxableAmount = lineNet;
         it.taxAmount = 0;
         it.cgstAmount = 0;
         it.sgstAmount = 0;
       }
-      it.lineTotal = Math.round((it.taxableAmount + it.taxAmount) * 100) / 100;
+      it.lineTotal = lineNet;
       next[index] = it;
+      return next;
+    });
+  };
+
+  const handleUpdateEditBillItemMrp = (index: number, newMrp: number) => {
+    setEditBillItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], mrp: Math.max(0, newMrp || 0) };
       return next;
     });
   };
@@ -318,19 +324,21 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       const next = [...prev];
       const it = { ...next[index] };
       it.discountPercent = disc;
-      const gross = it.quantity * it.rate;
-      it.discountAmount = Math.round(((gross * it.discountPercent) / 100) * 100) / 100;
-      it.taxableAmount = Math.max(0, gross - it.discountAmount);
+      const lineGross = it.quantity * it.rate;
+      it.discountAmount = Math.round(((lineGross * it.discountPercent) / 100) * 100) / 100;
+      const lineNet = Math.max(0, lineGross - it.discountAmount);
       if (it.taxRate > 0) {
-        it.taxAmount = Math.round(((it.taxableAmount * it.taxRate) / 100) * 100) / 100;
+        it.taxableAmount = Math.round((lineNet / (1 + it.taxRate / 100)) * 100) / 100;
+        it.taxAmount = Math.round((lineNet - it.taxableAmount) * 100) / 100;
         it.cgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
-        it.sgstAmount = Math.round((it.taxAmount / 2) * 100) / 100;
+        it.sgstAmount = Math.round((it.taxAmount - it.cgstAmount) * 100) / 100;
       } else {
+        it.taxableAmount = lineNet;
         it.taxAmount = 0;
         it.cgstAmount = 0;
         it.sgstAmount = 0;
       }
-      it.lineTotal = Math.round((it.taxableAmount + it.taxAmount) * 100) / 100;
+      it.lineTotal = lineNet;
       next[index] = it;
       return next;
     });
@@ -347,16 +355,19 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       return;
     }
     const qty = 1;
-    const rate = prod.saleRate;
-    const gross = qty * rate;
+    const rate = prod.saleRate || 0;
+    const mrp = prod.mrp ?? prod.saleRate ?? 0;
+    const lineNet = qty * rate;
     const taxRate = prod.taxRate || 0;
+    let taxableAmount = lineNet;
     let taxAmount = 0;
     let cgstAmount = 0;
     let sgstAmount = 0;
     if (taxRate > 0) {
-      taxAmount = Math.round(((gross * taxRate) / 100) * 100) / 100;
+      taxableAmount = Math.round((lineNet / (1 + taxRate / 100)) * 100) / 100;
+      taxAmount = Math.round((lineNet - taxableAmount) * 100) / 100;
       cgstAmount = Math.round((taxAmount / 2) * 100) / 100;
-      sgstAmount = Math.round((taxAmount / 2) * 100) / 100;
+      sgstAmount = Math.round((taxAmount - cgstAmount) * 100) / 100;
     }
     const newItem: InvoiceItem = {
       productId: prod.id,
@@ -365,11 +376,12 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       productName: prod.nameEn,
       unit: prod.unit,
       quantity: qty,
+      mrp,
       rate,
       discountPercent: 0,
       discountAmount: 0,
       taxRate,
-      taxableAmount: gross,
+      taxableAmount,
       cgstRate: taxRate / 2,
       cgstAmount,
       sgstRate: taxRate / 2,
@@ -377,7 +389,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       igstRate: 0,
       igstAmount: 0,
       taxAmount,
-      lineTotal: Math.round((gross + taxAmount) * 100) / 100,
+      lineTotal: lineNet,
     };
     setEditBillItems((prev) => [...prev, newItem]);
   };
@@ -608,25 +620,103 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     };
   }, [isCameraOpen]);
 
-  // F9 Quick key listener
+  // F9 Quick key listener (Single tap = Print Preview, Double tap = Direct Thermal Print)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F9') {
         e.preventDefault();
-        if (cartItems.length > 0) {
-          handleFinalizeBill('thermal');
-        } else {
+        if (cartItems.length === 0) {
+          playScannerBeep('error');
           setAlertMessage({ type: 'warning', text: 'Cannot checkout: Cart is empty. Add products to begin.' });
           setTimeout(() => setAlertMessage(null), 2500);
+          return;
+        }
+
+        const now = Date.now();
+        if (now - lastF9PressRef.current < 450) {
+          // Double tap F9 -> Direct Thermal Print!
+          if (checkoutClickTimerRef.current) {
+            clearTimeout(checkoutClickTimerRef.current);
+            checkoutClickTimerRef.current = null;
+          }
+          lastF9PressRef.current = 0;
+          handleFinalizeBill('thermal', true);
+        } else {
+          // Single tap F9 -> Open Print Preview
+          lastF9PressRef.current = now;
+          checkoutClickTimerRef.current = setTimeout(() => {
+            handleFinalizeBill('thermal', false);
+            checkoutClickTimerRef.current = null;
+          }, 280);
         }
       }
-      if (e.key === 'Escape' && cartItems.length > 0) {
-        clearCart();
+      if (e.key === 'Escape') {
+        if (printModalInvoice) {
+          setPrintModalInvoice(null);
+        } else if (isCameraOpen) {
+          setIsCameraOpen(false);
+        } else if (isQuickAddOpen) {
+          setIsQuickAddOpen(false);
+        } else if (cartItems.length > 0) {
+          clearCart();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cartItems]);
+  }, [
+    cartItems,
+    customerName,
+    selectedCustomer,
+    selectedCustomerId,
+    customerMobile,
+    customerAddress,
+    isInterstate,
+    billDiscount,
+    otherCharges,
+    notes,
+    paymentMethod,
+    tenderedAmount,
+    isSplitMode,
+    splitPayments,
+    invoiceNumber,
+    invoiceDate,
+    printModalInvoice,
+    isCameraOpen,
+    isQuickAddOpen,
+  ]);
+
+  // Checkout Single Click & Double Click handlers
+  const handleCheckoutSingleClick = () => {
+    if (cartItems.length === 0) {
+      playScannerBeep('error');
+      setAlertMessage({ type: 'warning', text: 'Cannot checkout: Cart is empty. Add products to begin.' });
+      setTimeout(() => setAlertMessage(null), 2500);
+      return;
+    }
+    if (checkoutClickTimerRef.current) {
+      clearTimeout(checkoutClickTimerRef.current);
+    }
+    // 260ms delay to distinguish single click from double click
+    checkoutClickTimerRef.current = setTimeout(() => {
+      // Single click: Show Print Preview modal (f9 click panna print preview varunum)
+      handleFinalizeBill('thermal', false);
+      checkoutClickTimerRef.current = null;
+    }, 260);
+  };
+
+  const handleCheckoutDoubleClick = () => {
+    if (checkoutClickTimerRef.current) {
+      clearTimeout(checkoutClickTimerRef.current);
+      checkoutClickTimerRef.current = null;
+    }
+    if (cartItems.length === 0) {
+      playScannerBeep('error');
+      return;
+    }
+    // Double click: Direct Thermal Print (2 double click paanaa termal print akunum)
+    handleFinalizeBill('thermal', true);
+  };
 
   // -------------------------------------------------------------
   // CART ACTIONS & BARCODE SCANNER
@@ -639,13 +729,16 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       return;
     }
 
-    // Fast lookup
+    const queryLower = query.toLowerCase();
+    // Fast lookup: barcode -> SKU -> exact name -> search suggestion -> partial name / tamil name
     const found =
       db.getProductByBarcode(query) ||
-      allProducts.find((p) => p.barcode.toLowerCase() === query.toLowerCase()) ||
-      allProducts.find((p) => p.productCode.toLowerCase() === query.toLowerCase()) ||
-      allProducts.find((p) => p.nameEn.toLowerCase() === query.toLowerCase()) ||
-      (searchFilteredProducts.length > 0 ? searchFilteredProducts[0] : null);
+      allProducts.find((p) => p.barcode.toLowerCase() === queryLower) ||
+      allProducts.find((p) => p.productCode.toLowerCase() === queryLower) ||
+      allProducts.find((p) => p.nameEn.toLowerCase() === queryLower) ||
+      (searchFilteredProducts.length > 0 ? searchFilteredProducts[0] : null) ||
+      allProducts.find((p) => p.nameEn.toLowerCase().includes(queryLower)) ||
+      allProducts.find((p) => p.nameTa && p.nameTa.toLowerCase().includes(queryLower));
 
     if (found) {
       addItemToCart(found, 1);
@@ -653,6 +746,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       setScanBarcode('');
       setIsSearchOpen(false);
     } else {
+      playScannerBeep('error');
       setAlertMessage({
         type: 'warning',
         text: `Product with barcode or SKU "${query}" was not found in catalog.`,
@@ -661,70 +755,21 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     }
   };
 
-  const handleSaveQuickAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickNameEn.trim()) {
-      setAlertMessage({ type: 'error', text: 'Product English Name is required.' });
-      setTimeout(() => setAlertMessage(null), 3000);
-      return;
-    }
-
-    const saleRateNum = Number(quickSaleRate) || 0;
-    const mrpNum = Number(quickMrp) || saleRateNum;
-    const purRateNum = Number(quickPurRate) || saleRateNum * 0.8;
-    const barcodeVal = quickBarcode.trim() || `890${Date.now().toString().slice(-9)}`;
-    const productCodeVal = `PRD-${Date.now().toString().slice(-5)}`;
-
-    const res = db.insertProduct({
-      nameEn: quickNameEn.trim(),
-      nameTa: quickNameTa.trim(),
-      barcode: barcodeVal,
-      productCode: productCodeVal,
-      categoryId: quickCategoryId || 1,
-      saleRate: saleRateNum,
-      mrp: mrpNum,
-      purchaseRate: purRateNum,
-      taxRate: quickTaxRate || 5,
-      openingStock: Number(quickStock) || 100,
-      currentStock: Number(quickStock) || 100,
-      unit: quickUnit || 'PCS',
-      isActive: true,
-    });
-
-    if (res.success && res.product) {
-      setAllProducts(db.getAllProducts());
-      addItemToCart(res.product, 1);
-      setIsQuickAddOpen(false);
-      setQuickNameEn('');
-      setQuickNameTa('');
-      setQuickBarcode('');
-      setQuickSaleRate('');
-      setQuickMrp('');
-      setQuickPurRate('');
-      setQuickStock(100);
-      setAlertMessage({
-        type: 'success',
-        text: `Product "${res.product.nameEn}" added to catalog and added to cart!`,
-      });
-      setTimeout(() => setAlertMessage(null), 3500);
-    } else {
-      setAlertMessage({
-        type: 'error',
-        text: `Failed to add product: ${res.errors.join(', ')}`,
-      });
-      setTimeout(() => setAlertMessage(null), 3500);
-    }
-  };
-
   const handleCameraScanItem = (barcode: string) => {
-    const found = db.getProductByBarcode(barcode) || allProducts.find((p) => p.barcode === barcode);
+    const cleanBarcode = barcode.trim();
+    const found =
+      db.getProductByBarcode(cleanBarcode) ||
+      allProducts.find((p) => p.barcode === cleanBarcode) ||
+      allProducts.find((p) => p.productCode.toLowerCase() === cleanBarcode.toLowerCase());
+
     if (found) {
       addItemToCart(found, 1);
       setIsCameraOpen(false);
       setAlertMessage({ type: 'success', text: `Scanned & Added: ${found.nameEn}` });
       setTimeout(() => setAlertMessage(null), 3000);
     } else {
-      setAlertMessage({ type: 'warning', text: `Barcode "${barcode}" not found.` });
+      playScannerBeep('error');
+      setAlertMessage({ type: 'warning', text: `Barcode "${cleanBarcode}" not found.` });
       setTimeout(() => setAlertMessage(null), 3000);
     }
   };
@@ -732,17 +777,22 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   const addItemToCart = (prod: Product, qtyToAdd = 1) => {
     // Check stock warning
     if (prod.currentStock <= 0) {
+      playScannerBeep('error');
       setAlertMessage({
         type: 'warning',
         text: `Warning: "${prod.nameEn}" is OUT OF STOCK (Stock: ${prod.currentStock}). Adding item will create negative stock if confirmed.`,
       });
       setTimeout(() => setAlertMessage(null), 4000);
     } else if (prod.currentStock < qtyToAdd) {
+      playScannerBeep('error');
       setAlertMessage({
         type: 'warning',
         text: `Low stock warning: "${prod.nameEn}" available stock is only ${prod.currentStock} ${prod.unit}.`,
       });
       setTimeout(() => setAlertMessage(null), 4000);
+    } else {
+      // Normal scan sound
+      playScannerBeep('success');
     }
 
     setCartItems((prev) => {
@@ -760,6 +810,11 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       }
 
       // Add new item line
+      const prodTax = prod.taxRate || 0;
+      const initCgst = isInterstate ? 0 : Math.round((prodTax / 2) * 100) / 100;
+      const initSgst = isInterstate ? 0 : Math.round((prodTax / 2) * 100) / 100;
+      const initIgst = isInterstate ? prodTax : 0;
+
       const newLine: InvoiceItem = {
         productId: prod.id,
         productCode: prod.productCode,
@@ -767,16 +822,17 @@ export const PosBilling: React.FC<PosBillingProps> = ({
         productName: prod.nameEn,
         unit: prod.unit || 'PCS',
         quantity: qtyToAdd,
+        mrp: prod.mrp !== undefined && prod.mrp > 0 ? prod.mrp : (prod.saleRate || 0),
         rate: prod.saleRate || 0,
         discountPercent: 0,
         discountAmount: 0,
-        taxRate: prod.taxRate || 0,
+        taxRate: prodTax,
         taxableAmount: 0,
-        cgstRate: 0,
+        cgstRate: initCgst,
         cgstAmount: 0,
-        sgstRate: 0,
+        sgstRate: initSgst,
         sgstAmount: 0,
-        igstRate: 0,
+        igstRate: initIgst,
         igstAmount: 0,
         taxAmount: 0,
         lineTotal: 0,
@@ -789,12 +845,19 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   };
 
   const updateCartItemQuantity = (index: number, newQty: number) => {
+    playScannerBeep('click');
     if (newQty <= 0) {
       removeCartItem(index);
       return;
     }
     setCartItems((prev) =>
       prev.map((item, idx) => (idx === index ? { ...item, quantity: newQty } : item))
+    );
+  };
+
+  const updateCartItemMrp = (index: number, newMrp: number) => {
+    setCartItems((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, mrp: Math.max(0, newMrp) } : item))
     );
   };
 
@@ -818,15 +881,38 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     );
   };
 
+  const updateCartItemCgst = (index: number, rate: number) => {
+    setCartItems((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, cgstRate: Math.max(0, rate) } : item))
+    );
+  };
+
+  const updateCartItemSgst = (index: number, rate: number) => {
+    setCartItems((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, sgstRate: Math.max(0, rate) } : item))
+    );
+  };
+
+  const updateCartItemIgst = (index: number, rate: number) => {
+    setCartItems((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, igstRate: Math.max(0, rate) } : item))
+    );
+  };
+
   const removeCartItem = (index: number) => {
+    playScannerBeep('click');
     setCartItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const clearCart = () => {
     if (cartItems.length === 0) return;
-    if (window.confirm('Are you sure you want to clear all items in the current bill?')) {
-      resetBill();
-    }
+    resetBill();
+    playScannerBeep('click');
+    setAlertMessage({
+      type: 'info' as any,
+      text: 'Current billing cart cleared.',
+    });
+    setTimeout(() => setAlertMessage(null), 2000);
   };
 
   const resetBill = () => {
@@ -848,8 +934,9 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   // -------------------------------------------------------------
   // FINALIZE & PRINT INVOICE
   // -------------------------------------------------------------
-  const handleFinalizeBill = (format: 'thermal' | 'a4') => {
+  const handleFinalizeBill = (format: 'thermal' | 'a4', autoPrint = false) => {
     if (cartItems.length === 0) {
+      playScannerBeep('error');
       setAlertMessage({ type: 'error', text: 'Cannot finalize bill: Cart is empty.' });
       setTimeout(() => setAlertMessage(null), 3000);
       return;
@@ -889,6 +976,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
 
     const res = db.finalizeInvoice(headerPayload);
     if (!res.success) {
+      playScannerBeep('error');
       setAlertMessage({
         type: 'error',
         text: `Error saving invoice: ${res.errors.join(', ')}`,
@@ -898,6 +986,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     }
 
     const savedInvoice = res.invoice!;
+    playScannerBeep('print');
     setAlertMessage({
       type: 'success',
       text: `Invoice #${savedInvoice.invoiceNumber} confirmed successfully! Total: ₹${savedInvoice.grandTotal.toFixed(2)} (${savedInvoice.paymentStatus}). Stock deducted and ledger updated.`,
@@ -907,6 +996,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     // Open print preview modal
     setPrintFormat(format);
     setPrintModalInvoice(savedInvoice);
+
+    // If autoPrint requested (e.g. 2 double clicks), immediately trigger thermal print dialog
+    if (autoPrint) {
+      setTimeout(() => {
+        window.print();
+      }, 180);
+    }
 
     // Reload catalog & history
     reloadData();
@@ -1151,15 +1247,15 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       {/* TAB 1: POS BILLING TERMINAL (MODERN SCREENSHOT FORMAT)   */}
       {/* ========================================================= */}
       {activeSubTab === 'pos' && (
-        <div className="flex-1 flex flex-col h-[calc(100%-40px)] bg-slate-100 overflow-hidden p-2 sm:p-3">
+        <div className="flex-1 flex flex-col h-[calc(100%-40px)] bg-slate-100 overflow-hidden p-1.5 sm:p-2">
           {/* Main Card with rounded corners and border matching image */}
           <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
             {/* Top Bar: Barcode/Search Input + Add Item + Camera Scan + Quick Add */}
-            <div className="p-3 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 bg-white">
+            <div className="px-3 py-2 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 bg-white">
               <form onSubmit={handleBarcodeSubmit} className="flex-1 relative" ref={searchContainerRef}>
                 <div className="relative flex items-center">
                   <div className="absolute left-3 text-blue-500 pointer-events-none flex items-center">
-                    <BarcodeIcon className="w-5 h-5" />
+                    <BarcodeIcon className="w-4 h-4" />
                   </div>
                   <input
                     ref={barcodeInputRef}
@@ -1173,7 +1269,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                       if (searchTerm.trim()) setIsSearchOpen(true);
                     }}
                     placeholder="Scan or type barcode / product name..."
-                    className="w-full pl-10 pr-8 py-2 bg-white border-2 border-blue-400 focus:border-blue-600 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none shadow-2xs transition-colors"
+                    className="w-full pl-9 pr-8 py-1.5 bg-white border-2 border-blue-400 focus:border-blue-600 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none shadow-2xs transition-colors"
                   />
                   {searchTerm && (
                     <button
@@ -1234,7 +1330,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 <button
                   type="button"
                   onClick={() => handleBarcodeSubmit()}
-                  className="px-5 py-2 bg-[#1877f2] hover:bg-blue-700 text-white font-medium rounded-xl text-xs shadow-2xs transition-colors shrink-0 cursor-pointer flex items-center justify-center"
+                  className="px-4 py-1.5 bg-[#1877f2] hover:bg-blue-700 text-white font-medium rounded-lg text-xs shadow-2xs transition-colors shrink-0 cursor-pointer flex items-center justify-center"
                 >
                   Add Item
                 </button>
@@ -1242,18 +1338,18 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCameraOpen(true)}
-                  className="px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-400 hover:border-blue-500 font-medium rounded-xl text-xs transition-colors shrink-0 cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-blue-400 hover:border-blue-500 font-medium rounded-lg text-xs transition-colors shrink-0 cursor-pointer flex items-center gap-1.5"
                 >
-                  <Camera className="w-4 h-4 text-blue-600" />
+                  <Camera className="w-3.5 h-3.5 text-blue-600" />
                   <span>Camera Scan</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsQuickAddOpen(true)}
-                  className="px-4 py-2 bg-emerald-50/40 hover:bg-emerald-50 text-emerald-700 border border-emerald-400 hover:border-emerald-500 font-medium rounded-xl text-xs transition-colors shrink-0 cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-emerald-50/40 hover:bg-emerald-50 text-emerald-700 border border-emerald-400 hover:border-emerald-500 font-medium rounded-lg text-xs transition-colors shrink-0 cursor-pointer flex items-center gap-1.5"
                 >
-                  <PackagePlus className="w-4 h-4 text-emerald-600" />
+                  <PackagePlus className="w-3.5 h-3.5 text-emerald-600" />
                   <span>+ Quick Add</span>
                 </button>
               </div>
@@ -1289,14 +1385,15 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                           <th className="py-2.5 px-3 w-10 text-center border-b border-r border-slate-200">#</th>
                           <th className="py-2.5 px-3 border-b border-r border-slate-200 w-32">Barcode / SKU</th>
                           <th className="py-2.5 px-3 border-b border-r border-slate-200">Item Description</th>
-                          <th className="py-2.5 px-3 text-center w-28 border-b border-r border-slate-200">Qty</th>
-                          <th className="py-2.5 px-2 text-center w-16 border-b border-r border-slate-200">Unit</th>
-                          <th className="py-2.5 px-3 text-right w-24 border-b border-r border-slate-200">Rate (₹)</th>
+                          <th className="py-2.5 px-2 text-center w-28 border-b border-r border-slate-200">Qty</th>
+                          <th className="py-2.5 px-2 text-right w-20 border-b border-r border-slate-200">MRP (₹)</th>
+                          <th className="py-2.5 px-2 text-right w-22 border-b border-r border-slate-200 font-bold text-slate-800">Rate (₹)</th>
                           <th className="py-2.5 px-2 text-center w-16 border-b border-r border-slate-200">Disc %</th>
-                          <th className="py-2.5 px-3 text-right w-24 border-b border-r border-slate-200">Taxable (₹)</th>
-                          <th className="py-2.5 px-2 text-center w-16 border-b border-r border-slate-200">GST %</th>
-                          <th className="py-2.5 px-3 text-right w-24 border-b border-r border-slate-200">GST (₹)</th>
-                          <th className="py-2.5 px-3 text-right w-28 border-b border-r border-slate-200 font-bold">Total (₹)</th>
+                          <th className="py-2.5 px-1.5 text-center w-16 border-b border-r border-slate-200 text-blue-800">CGST %</th>
+                          <th className="py-2.5 px-1.5 text-center w-16 border-b border-r border-slate-200 text-blue-800">SGST %</th>
+                          <th className="py-2.5 px-1.5 text-center w-16 border-b border-r border-slate-200 text-indigo-800">IGST %</th>
+                          <th className="py-2.5 px-2 text-right w-22 border-b border-r border-slate-200">GST (₹)</th>
+                          <th className="py-2.5 px-2.5 text-right w-24 border-b border-r border-slate-200 font-bold text-emerald-800">Total (₹)</th>
                           <th className="py-2.5 px-2 w-10 text-center border-b border-slate-200"></th>
                         </tr>
                       </thead>
@@ -1315,13 +1412,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                 <div className="font-semibold text-slate-900">{item.productName}</div>
                                 {prod?.nameTa && <div className="text-[10px] text-slate-500 font-sans">{prod.nameTa}</div>}
                                 {isStockLow && (
-                                  <div className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
+                                   <div className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
                                     <AlertTriangle className="w-3 h-3 text-amber-600 inline" />
                                     Available: {prod?.currentStock || 0}
                                   </div>
                                 )}
                               </td>
-                              <td className="py-2 px-3 text-center border-r border-slate-100">
+                              <td className="py-2 px-2 text-center border-r border-slate-100">
                                 <div className="inline-flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden shadow-2xs">
                                   <button
                                     type="button"
@@ -1336,7 +1433,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                     step="any"
                                     value={item.quantity}
                                     onChange={(e) => updateCartItemQuantity(idx, parseFloat(e.target.value) || 0)}
-                                    className="w-12 h-6 text-center font-mono font-bold text-xs focus:outline-none bg-transparent"
+                                    className="w-12 h-6 text-center font-mono font-bold text-xs focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                   <button
                                     type="button"
@@ -1347,15 +1444,28 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                   </button>
                                 </div>
                               </td>
-                              <td className="py-2 px-2 text-center font-mono text-slate-600 text-[11px] border-r border-slate-100">{item.unit}</td>
-                              <td className="py-2 px-3 text-right border-r border-slate-100">
+                              {/* MRP Edit Box */}
+                              <td className="py-2 px-2 text-right border-r border-slate-100">
                                 <input
                                   type="number"
                                   min="0"
-                                  step="0.01"
+                                  step="any"
+                                  value={item.mrp !== undefined ? item.mrp : item.rate}
+                                  onChange={(e) => updateCartItemMrp(idx, parseFloat(e.target.value) || 0)}
+                                  placeholder="0.00"
+                                  className="w-18 px-1.5 py-0.5 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded text-right font-mono text-xs text-slate-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </td>
+                              {/* Rate Edit Box: Final Price, GST deducted backwards */}
+                              <td className="py-2 px-2 text-right border-r border-slate-100 bg-emerald-50/20">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
                                   value={item.rate}
                                   onChange={(e) => updateCartItemRate(idx, parseFloat(e.target.value) || 0)}
-                                  className="w-18 px-1.5 py-0.5 border border-slate-200 rounded text-right font-mono text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                                  title="Final Price: GST is deducted from this rate"
+                                  className="w-18 px-1.5 py-0.5 border border-emerald-300 focus:border-emerald-600 rounded text-right font-mono text-xs font-semibold text-slate-900 bg-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
                               <td className="py-2 px-2 text-center border-r border-slate-100">
@@ -1365,14 +1475,49 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                   max="100"
                                   value={item.discountPercent || 0}
                                   onChange={(e) => updateCartItemDiscount(idx, parseFloat(e.target.value) || 0)}
-                                  className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center font-mono text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                                  className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center font-mono text-xs text-slate-800 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
-                              <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-700 border-r border-slate-100">₹{item.taxableAmount.toFixed(2)}</td>
-                              <td className="py-2 px-2 text-center font-mono text-slate-600 border-r border-slate-100">
-                                <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[11px] font-medium">{item.taxRate}%</span>
+                              {/* CGST % Edit Box */}
+                              <td className="py-2 px-1 text-center border-r border-slate-100 bg-blue-50/20">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="any"
+                                  value={item.cgstRate ?? 0}
+                                  onChange={(e) => updateCartItemCgst(idx, parseFloat(e.target.value) || 0)}
+                                  placeholder="0"
+                                  className="w-12 px-1 py-0.5 border border-blue-200 focus:border-blue-500 rounded text-center font-mono text-xs text-blue-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
                               </td>
-                              <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-700 border-r border-slate-100">₹{item.taxAmount.toFixed(2)}</td>
+                              {/* SGST % Edit Box */}
+                              <td className="py-2 px-1 text-center border-r border-slate-100 bg-blue-50/20">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="any"
+                                  value={item.sgstRate ?? 0}
+                                  onChange={(e) => updateCartItemSgst(idx, parseFloat(e.target.value) || 0)}
+                                  placeholder="0"
+                                  className="w-12 px-1 py-0.5 border border-blue-200 focus:border-blue-500 rounded text-center font-mono text-xs text-blue-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </td>
+                              {/* IGST % Edit Box */}
+                              <td className="py-2 px-1 text-center border-r border-slate-100 bg-indigo-50/20">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="any"
+                                  value={item.igstRate ?? 0}
+                                  onChange={(e) => updateCartItemIgst(idx, parseFloat(e.target.value) || 0)}
+                                  placeholder="0"
+                                  className="w-12 px-1 py-0.5 border border-indigo-200 focus:border-indigo-500 rounded text-center font-mono text-xs text-indigo-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono tabular-nums text-slate-700 border-r border-slate-100">₹{item.taxAmount.toFixed(2)}</td>
                               <td className="py-2 px-3 text-right font-mono font-bold tabular-nums text-slate-900 border-r border-slate-100">₹{item.lineTotal.toFixed(2)}</td>
                               <td className="py-2 px-2 text-center">
                                 <button
@@ -1411,63 +1556,79 @@ export const PosBilling: React.FC<PosBillingProps> = ({
               )}
             </div>
 
-            {/* Bottom Checkout Section: 3 Columns Layout matching screenshot */}
-            <div className="border-t border-slate-200 bg-white p-3.5 grid grid-cols-1 lg:grid-cols-12 gap-4 shrink-0">
+            {/* Bottom Checkout Section: Ultra-Compact High-Density POS Layout */}
+            <div className="border-t border-slate-200 bg-white px-2.5 py-1.5 grid grid-cols-1 lg:grid-cols-12 gap-2 shrink-0 select-none">
               {/* Column 1: CHECKOUT & Customer Details (col-span-4) */}
               <div className="lg:col-span-4 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-1">
-                    <span className="font-bold text-slate-900 text-xs tracking-wider uppercase">CHECKOUT</span>
-                    <span className="text-[11px] font-semibold text-slate-400">QUICK KEY: F9</span>
+                  <div className="flex items-center justify-between pb-0.5">
+                    <span className="font-bold text-slate-800 text-[10px] tracking-wider uppercase">
+                      CUSTOMER DETAILS
+                    </span>
+                    <span className="text-[9px] font-semibold text-slate-400">QUICK: F9</span>
                   </div>
 
-                  <div className="mt-1">
-                    <div className="text-[11px] font-semibold text-slate-700 mb-1.5">Customer Details</div>
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-2 gap-1">
                       <input
                         type="text"
                         placeholder="Name (பெயர்)"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
+                        className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-6"
                       />
                       <input
                         type="tel"
                         placeholder="Mobile (அலைபேசி)"
                         value={customerMobile}
                         onChange={(e) => setCustomerMobile(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
+                        className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-6"
                       />
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Address (முகவரி - விருப்பம்)"
-                      value={customerAddress}
-                      onChange={(e) => setCustomerAddress(e.target.value)}
-                      className="w-full mt-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Bill Notes / Remarks (குறிப்புகள்)..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="w-full mt-3 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
-                    />
+                    <div className="grid grid-cols-2 gap-1">
+                      <input
+                        type="text"
+                        placeholder="Address (முகவரி)"
+                        value={customerAddress}
+                        onChange={(e) => setCustomerAddress(e.target.value)}
+                        className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-6"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Notes (குறிப்புகள்)"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-6"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Column 2: PAYMENT METHOD (col-span-4) */}
-              <div className="lg:col-span-4 lg:border-l lg:border-slate-200 lg:pl-4 flex flex-col justify-between">
+              {/* Column 2: PAYMENT METHOD (col-span-5) */}
+              <div className="lg:col-span-5 lg:border-l lg:border-slate-200 lg:pl-2.5 flex flex-col justify-between">
                 <div>
-                  <div className="font-bold text-slate-900 text-xs tracking-wider uppercase mb-2">
-                    PAYMENT METHOD
+                  <div className="flex items-center justify-between pb-0.5">
+                    <span className="font-bold text-slate-800 text-[10px] tracking-wider uppercase">
+                      PAYMENT METHOD
+                    </span>
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      <span className="text-slate-500">Tendered:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={tenderedAmount || ''}
+                        onChange={(e) => setTenderedAmount(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-16 px-1 py-0 bg-slate-50 border border-slate-200 rounded text-center font-mono text-[11px] text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-5"
+                      />
+                    </div>
                   </div>
 
-                  {/* 4 buttons row matching screenshot */}
-                  <div className="grid grid-cols-4 gap-2 mb-3">
+                  {/* 4 buttons row in compact horizontal style */}
+                  <div className="grid grid-cols-4 gap-1 mb-1">
                     {/* Cash */}
                     <button
                       type="button"
@@ -1475,13 +1636,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         setPaymentMethod('Cash');
                         setIsSplitMode(false);
                       }}
-                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
                         paymentMethod === 'Cash' && !isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <Banknote className="w-4 h-4 mb-1" />
+                      <Banknote className="w-3 h-3 shrink-0" />
                       <span>Cash</span>
                     </button>
 
@@ -1492,14 +1653,14 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         setPaymentMethod('UPI');
                         setIsSplitMode(false);
                       }}
-                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
                         paymentMethod === 'UPI' && !isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <Smartphone className="w-4 h-4 mb-1" />
-                      <span>UPI/QR</span>
+                      <Smartphone className="w-3 h-3 shrink-0" />
+                      <span>UPI</span>
                     </button>
 
                     {/* Card */}
@@ -1509,13 +1670,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         setPaymentMethod('Card');
                         setIsSplitMode(false);
                       }}
-                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
                         paymentMethod === 'Card' && !isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <CreditCard className="w-4 h-4 mb-1" />
+                      <CreditCard className="w-3 h-3 shrink-0" />
                       <span>Card</span>
                     </button>
 
@@ -1525,108 +1686,89 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                       onClick={() => {
                         setIsSplitMode(true);
                       }}
-                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
                         isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <Layers className="w-4 h-4 mb-1" />
+                      <Layers className="w-3 h-3 shrink-0" />
                       <span>Split</span>
                     </button>
                   </div>
 
-                  {/* Cash Tendered & Change Due */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>Cash Tendered (₹)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={tenderedAmount || ''}
-                        onChange={(e) => setTenderedAmount(parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                        className="w-24 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-center font-mono text-xs text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                      <span>Change Due:</span>
-                      <span className="font-mono font-bold text-emerald-500 text-sm">
-                        ₹{(calculatedBill.cashChange ?? 0).toFixed(2)}
+                  {/* Single-row Payment Status Strip */}
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-[10px]">
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-500 font-medium">Paid:</span>
+                      <span className="font-mono font-bold text-emerald-600">
+                        ₹{(calculatedBill.paidAmount ?? 0).toFixed(2)}
                       </span>
                     </div>
-
-                    {/* 2-box Paid Amount & Paid Balance matching screenshot */}
-                    <div className="grid grid-cols-2 border border-slate-200 rounded-xl p-2 bg-slate-50/50 divide-x divide-slate-200 mt-2">
-                      <div className="pr-2">
-                        <div className="text-[11px] text-slate-500 font-medium">Paid Amount</div>
-                        <div className="font-mono font-bold text-emerald-600 text-sm">
-                          ₹{(calculatedBill.paidAmount ?? 0).toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="pl-3">
-                        <div className="text-[11px] text-slate-500 font-medium">Paid Balance</div>
-                        <div className="font-mono font-bold text-amber-600 text-sm">
-                          ₹{(calculatedBill.balanceDue ?? 0).toFixed(2)}
-                        </div>
-                      </div>
+                    <div className="h-3 w-[1px] bg-slate-200" />
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-500 font-medium">Balance:</span>
+                      <span className="font-mono font-bold text-amber-600">
+                        ₹{(calculatedBill.balanceDue ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="h-3 w-[1px] bg-slate-200" />
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-500 font-medium">Change:</span>
+                      <span className="font-mono font-bold text-emerald-600">
+                        ₹{(calculatedBill.cashChange ?? 0).toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Column 3: TOTALS & CHECKOUT BUTTON (col-span-4) */}
-              <div className="lg:col-span-4 lg:border-l lg:border-slate-200 lg:pl-4 flex flex-col justify-between h-full space-y-4">
-                <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-3 space-y-2">
-                  {/* Subtotal */}
-                  <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                    <span>Subtotal:</span>
-                    <span className="font-mono font-bold text-slate-800">
-                      ₹{(calculatedBill.grossAmount - calculatedBill.itemDiscount).toFixed(2)}
+              {/* Column 3: TOTALS & CHECKOUT BUTTON (col-span-3) */}
+              <div className="lg:col-span-3 lg:border-l lg:border-slate-200 lg:pl-2.5 flex flex-col justify-between h-full">
+                <div className="bg-slate-50/80 border border-slate-200 rounded px-2 py-1 space-y-0.5">
+                  <div className="flex items-center justify-between text-[10px] text-slate-600">
+                    <span>Sub: <strong className="font-mono text-slate-800">₹{(calculatedBill.grossAmount - calculatedBill.itemDiscount).toFixed(2)}</strong></span>
+                    <span className="flex items-center gap-0.5">
+                      Disc:
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={billDiscount || ''}
+                        onChange={(e) => setBillDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        placeholder="0"
+                        className="w-12 px-1 py-0 bg-white border border-slate-200 rounded text-center font-mono text-[10px] text-slate-800 focus:border-blue-500 focus:outline-none h-4"
+                      />
                     </span>
                   </div>
 
-                  {/* Discount */}
-                  <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                    <span>Discount (₹):</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={billDiscount || ''}
-                      onChange={(e) => setBillDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                      placeholder="0"
-                      className="w-20 px-2 py-0.5 bg-white border border-slate-200 rounded-md text-center font-mono text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Divider */}
-                  <div className="border-t border-slate-200 my-1.5" />
-
-                  {/* TOTAL */}
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-slate-900 text-sm tracking-wide">TOTAL:</span>
-                    <span className="font-extrabold text-blue-600 text-2xl font-mono tracking-tight">
+                  <div className="flex items-center justify-between pt-0.5 border-t border-slate-200">
+                    <span className="font-bold text-slate-900 text-xs">TOTAL:</span>
+                    <span className="font-extrabold text-blue-600 text-base font-mono">
                       ₹{calculatedBill.grandTotal.toFixed(2)}
                     </span>
                   </div>
                 </div>
 
-                {/* Checkout (F9) button matching screenshot */}
+                {/* Checkout (F9) button */}
                 <button
                   type="button"
-                  onClick={() => handleFinalizeBill('thermal')}
+                  onClick={handleCheckoutSingleClick}
+                  onDoubleClick={handleCheckoutDoubleClick}
                   disabled={cartItems.length === 0}
-                  className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  className={`w-full py-1 mt-1 rounded font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none h-8.5 ${
                     cartItems.length === 0
                       ? 'bg-[#b0bec5] text-white cursor-not-allowed opacity-80'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-[0.99]'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-[0.99]'
                   }`}
                 >
-                  <Printer className="w-4 h-4" />
-                  <span>Checkout (F9)</span>
+                  <div className="flex items-center gap-1.5 leading-none">
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Checkout (F9)</span>
+                  </div>
+                  <span className="text-[8.5px] font-normal text-blue-100 opacity-90 leading-tight">
+                    Click: Preview · 2x Click: Thermal Print
+                  </span>
                 </button>
               </div>
             </div>
@@ -2315,6 +2457,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                           <th className="p-1 border-r border-black">Item Description</th>
                           <th className="p-1 border-r border-black w-14 text-center">HSN/SKU</th>
                           <th className="p-1 border-r border-black w-12 text-center">Qty</th>
+                          <th className="p-1 border-r border-black w-14 text-right">MRP ₹</th>
                           <th className="p-1 border-r border-black w-14 text-right">Rate ₹</th>
                           <th className="p-1 border-r border-black w-14 text-right">Taxable ₹</th>
                           <th className="p-1 border-r border-black w-12 text-center">GST %</th>
@@ -2329,6 +2472,9 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                             <td className="p-1 border-r border-black text-center font-mono">{it.productCode}</td>
                             <td className="p-1 border-r border-black text-center font-mono">
                               {it.quantity} {it.unit}
+                            </td>
+                            <td className="p-1 border-r border-black text-right font-mono">
+                              ₹{(it.mrp !== undefined ? it.mrp : it.rate).toFixed(2)}
                             </td>
                             <td className="p-1 border-r border-black text-right font-mono">
                               ₹{it.rate.toFixed(2)}
@@ -2421,17 +2567,156 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+                  onClick={() => {
+                    playScannerBeep('print');
+                    window.print();
+                  }}
+                  className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print Document</span>
+                  <span>Print {printFormat === 'thermal' ? 'Thermal Receipt' : 'A4 Invoice'} (Enter)</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CAMERA BARCODE SCANNER                             */}
+      {/* ========================================================= */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-3 bg-[#1e395b] text-white flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-cyan-300" />
+                <span className="font-bold text-sm">Live Camera Barcode Scanner</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCameraOpen(false)}
+                className="p-1 hover:bg-white/10 rounded text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Video Viewport & Scanning Reticle */}
+            <div className="p-4 bg-slate-900 text-white flex flex-col items-center">
+              <div className="relative w-full max-w-xs h-56 bg-black rounded-lg overflow-hidden border-2 border-cyan-400 flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                {/* Laser animation bar */}
+                <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500 shadow-[0_0_12px_rgba(239,68,68,1)] animate-pulse pointer-events-none" />
+                {/* Viewfinder corner guides */}
+                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-cyan-300 pointer-events-none" />
+                <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-cyan-300 pointer-events-none" />
+                <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-cyan-300 pointer-events-none" />
+                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-cyan-300 pointer-events-none" />
+                <div className="absolute bottom-2 inset-x-0 text-center text-[10px] text-cyan-200 bg-black/60 py-0.5">
+                  Align product barcode inside red laser
+                </div>
+              </div>
+            </div>
+
+            {/* Manual Entry & Quick Tap Barcodes for instantaneous testing */}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 space-y-3">
+              {/* Quick Scan Barcode Input */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (cameraManualBarcode.trim()) {
+                    handleCameraScanItem(cameraManualBarcode.trim());
+                    setCameraManualBarcode('');
+                  }
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={cameraManualBarcode}
+                  onChange={(e) => setCameraManualBarcode(e.target.value)}
+                  placeholder="Or enter barcode directly..."
+                  className="flex-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs font-mono focus:border-blue-500 focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer shrink-0"
+                >
+                  Scan Code
+                </button>
+              </form>
+
+              {/* Quick-tap sample product barcodes from store */}
+              <div>
+                <div className="text-[11px] font-semibold text-slate-600 mb-1 flex items-center justify-between">
+                  <span>Quick-tap Store Barcodes:</span>
+                  <span className="text-[10px] text-slate-400">Tap to instant add</span>
+                </div>
+                <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                  {allProducts.slice(0, 8).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleCameraScanItem(p.barcode)}
+                      className="px-2 py-0.5 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded text-[10px] text-slate-700 font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <BarcodeIcon className="w-2.5 h-2.5 text-slate-400" />
+                      <span className="truncate max-w-[120px]">{p.nameEn}</span>
+                      <span className="font-mono text-slate-400 text-[9px]">({p.barcode})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-2.5 bg-slate-100 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsCameraOpen(false)}
+                className="px-4 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded text-xs font-semibold text-slate-700 cursor-pointer"
+              >
+                Close Scanner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: QUICK ADD PRODUCT TO CATALOG & CART                */}
+      {/* ========================================================= */}
+      <ProductDialog
+        product={null}
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        title="POS Store — Quick Add Product to Master Catalog & Cart"
+        submitButtonText="Save & Add to Cart"
+        onSaved={(newProduct) => {
+          setIsQuickAddOpen(false);
+          const refreshed = db.getAllProducts();
+          setAllProducts(refreshed);
+          if (newProduct) {
+            addItemToCart(newProduct, 1);
+            playScannerBeep('success');
+            setAlertMessage({
+              type: 'success',
+              text: `Product "${newProduct.nameEn}" saved to master catalog & added to cart!`,
+            });
+            setTimeout(() => setAlertMessage(null), 4000);
+          }
+          onRefreshData?.();
+        }}
+      />
 
       {/* ========================================================= */}
       {/* MODAL 2: CANCEL / VOID INVOICE MODAL                      */}
@@ -2862,11 +3147,12 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                       <tr>
                         <th className="p-1.5 w-8 text-center">#</th>
                         <th className="p-1.5">Product Name</th>
-                        <th className="p-1.5 text-center w-20">Qty</th>
-                        <th className="p-1.5 text-right w-24">Rate (₹)</th>
-                        <th className="p-1.5 text-center w-16">Disc %</th>
-                        <th className="p-1.5 text-center w-16">GST %</th>
-                        <th className="p-1.5 text-right w-24">Total (₹)</th>
+                        <th className="p-1.5 text-center w-16">Qty</th>
+                        <th className="p-1.5 text-right w-20">MRP (₹)</th>
+                        <th className="p-1.5 text-right w-20 font-bold">Rate (₹)</th>
+                        <th className="p-1.5 text-center w-14">Disc %</th>
+                        <th className="p-1.5 text-center w-14">GST %</th>
+                        <th className="p-1.5 text-right w-22">Total (₹)</th>
                         <th className="p-1.5 text-center w-10">Act</th>
                       </tr>
                     </thead>
@@ -2884,17 +3170,28 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                               min="1"
                               value={item.quantity}
                               onChange={(e) => handleUpdateEditBillItemQty(idx, Number(e.target.value))}
-                              className="w-16 text-center border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
+                              className="w-14 text-center border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
                             />
                           </td>
                           <td className="p-1.5 text-right">
                             <input
                               type="number"
                               min="0"
-                              step="0.01"
+                              step="any"
+                              value={item.mrp !== undefined ? item.mrp : item.rate}
+                              onChange={(e) => handleUpdateEditBillItemMrp(idx, Number(e.target.value))}
+                              className="w-16 text-right border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
+                            />
+                          </td>
+                          <td className="p-1.5 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
                               value={item.rate}
                               onChange={(e) => handleUpdateEditBillItemRate(idx, Number(e.target.value))}
-                              className="w-20 text-right border border-slate-300 rounded px-1 py-0.5 font-mono text-xs"
+                              title="Final Price: GST deducted from rate"
+                              className="w-18 text-right border border-emerald-300 rounded px-1 py-0.5 font-mono text-xs font-semibold"
                             />
                           </td>
                           <td className="p-1.5 text-center">
