@@ -109,8 +109,8 @@ namespace ShopBilling.UI.Forms
             // Card 2: Billing & Print Settings
             var grpBilling = CreateGroupCard("BILLING & PRINT PREFERENCES", 480, 270);
             AddFormRow(grpBilling, "Currency Symbol:", txtCurrencySymbol = new TextBox { Width = 100, Text = "₹" }, 35);
-            cmbReceiptSize = new ComboBox { Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbReceiptSize.Items.AddRange(new object[] { "80mm Thermal", "A4 Full Page" });
+            cmbReceiptSize = new ComboBox { Width = 230, DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbReceiptSize.Items.AddRange(new object[] { "A4 Full Page", "A5 Half Sheet (210x148mm)", "A4 Dual Half-Sheet (2-in-1)", "104mm (4-Inch) Thermal", "80mm Thermal" });
             AddFormRow(grpBilling, "Default Bill Size:", cmbReceiptSize, 75);
 
             numDefaultDiscount = new NumericUpDown { Width = 100, Minimum = 0, Maximum = 100, DecimalPlaces = 1 };

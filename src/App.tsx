@@ -72,7 +72,10 @@ export default function App() {
       } else if (e.key === 'F4') {
         e.preventDefault();
         setActiveNav('barcode');
-      } else if (e.key === 'F5' || e.key === 'F6') {
+      } else if (e.key === 'F5') {
+        e.preventDefault();
+        setActiveNav('payments');
+      } else if (e.key === 'F6') {
         e.preventDefault();
         setActiveNav('history');
       } else if (e.key === 'F7') {
@@ -257,6 +260,15 @@ export default function App() {
                 />
               )}
 
+              {activeNav === 'payments' && (
+                <PosBilling
+                  onRefreshData={refreshData}
+                  onNavigateToProducts={() => setActiveNav('products')}
+                  onNavigateToStock={() => setActiveNav('stock')}
+                  initialActiveSubTab="history"
+                />
+              )}
+
               {activeNav === 'history' && (
                 <PosBilling
                   onRefreshData={refreshData}
@@ -338,6 +350,7 @@ export default function App() {
                 activeNav !== 'suppliers' &&
                 activeNav !== 'stock' &&
                 activeNav !== 'pos' &&
+                activeNav !== 'payments' &&
                 activeNav !== 'history' &&
                 activeNav !== 'barcode' &&
                 activeNav !== 'invoices' &&

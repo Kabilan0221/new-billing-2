@@ -37,10 +37,10 @@ Source: "..\src\ShopBilling.UI\bin\Release\ShopBilling.exe.config"; DestDir: "{a
 Source: "..\src\ShopBilling.UI\bin\Release\ShopBilling.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\src\ShopBilling.UI\bin\Release\ShopBilling.Data.dll"; DestDir: "{app}"; Flags: ignoreversion
 
-; SQLite Managed & Native Interop Libraries (Windows 7 SP1 x86 & x64)
+; SQLite Managed & Native Interop Libraries (Windows 7 SP1 / 10 / 11 — x86 & x64 dual native deployment)
 Source: "..\src\ShopBilling.UI\bin\Release\System.Data.SQLite.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\src\ShopBilling.UI\bin\Release\x86\SQLite.Interop.dll"; DestDir: "{app}\x86"; Flags: ignoreversion
-Source: "..\src\ShopBilling.UI\bin\Release\x64\SQLite.Interop.dll"; DestDir: "{app}\x64"; Flags: ignoreversion; Check: Is64BitInstallMode
+Source: "..\src\ShopBilling.UI\bin\Release\x64\SQLite.Interop.dll"; DestDir: "{app}\x64"; Flags: ignoreversion
 
 ; ClosedXML & OpenXML Spreadsheet Dependencies
 Source: "..\src\ShopBilling.UI\bin\Release\ClosedXML.dll"; DestDir: "{app}"; Flags: ignoreversion

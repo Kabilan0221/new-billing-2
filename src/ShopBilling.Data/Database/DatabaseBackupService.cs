@@ -155,9 +155,10 @@ namespace ShopBilling.Data.Database
             return true;
         }
 
-        public static bool RestoreBackup(string backupFilePath, out string safetyBackupPath, out string errorMessage)
+        public static bool RestoreBackup(string backupFilePath, out string safetyBackupPath, out string summaryMessage, out string errorMessage)
         {
             safetyBackupPath = null;
+            summaryMessage = null;
             errorMessage = null;
 
             // 1. Validate candidate backup file integrity and schema
@@ -214,6 +215,33 @@ namespace ShopBilling.Data.Database
                         checkpointCmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
                         checkpointCmd.ExecuteNonQuery();
                     }
+
+                    // 5. Verify restored business records: products, invoices, customers, stock, and payments
+                    using (var countCmd = destConn.CreateCommand())
+                    {
+                        countCmd.CommandText = @"
+                            SELECT 
+                                (SELECT COUNT(*) FROM products) AS prod_count,
+                                (SELECT COUNT(*) FROM invoices) AS inv_count,
+                                (SELECT COUNT(*) FROM customers) AS cust_count,
+                                (SELECT COUNT(*) FROM invoice_payments) AS pay_count,
+                                (SELECT COUNT(*) FROM stock_movements) AS stock_count;
+                        ";
+                        using (var reader = countCmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                long prodCount = Convert.ToInt64(reader["prod_count"]);
+                                long invCount = Convert.ToInt64(reader["inv_count"]);
+                                long custCount = Convert.ToInt64(reader["cust_count"]);
+                                long payCount = Convert.ToInt64(reader["pay_count"]);
+                                long stockCount = Convert.ToInt64(reader["stock_count"]);
+
+                                summaryMessage = $"Verified Restored Records: {prodCount:N0} products, {invCount:N0} invoices, {custCount:N0} customers, {payCount:N0} payments, {stockCount:N0} stock movements.";
+                                AppLogger.Info(summaryMessage);
+                            }
+                        }
+                    }
                 }
 
                 SQLiteConnection.ClearAllPools();
@@ -257,6 +285,11 @@ namespace ShopBilling.Data.Database
 
                 return false;
             }
+        }
+
+        public static bool RestoreBackup(string backupFilePath, out string safetyBackupPath, out string errorMessage)
+        {
+            return RestoreBackup(backupFilePath, out safetyBackupPath, out _, out errorMessage);
         }
 
         public static bool RestoreBackup(string backupFilePath)

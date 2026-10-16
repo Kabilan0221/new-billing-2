@@ -374,13 +374,13 @@ namespace ShopBilling.UI.Forms
                 btnRestoreBackup.Enabled = false;
                 btnRestoreBackup.Text = "Restoring...";
 
-                bool restored = DatabaseBackupService.RestoreBackup(filePath, out string safetyBackupPath, out string errorMessage);
+                bool restored = DatabaseBackupService.RestoreBackup(filePath, out string safetyBackupPath, out string summaryMessage, out string errorMessage);
                 if (restored)
                 {
                     lblRestoreResult.ForeColor = Color.FromArgb(22, 101, 52);
-                    lblRestoreResult.Text = $"✓ Database snapshot restored successfully!\nSafety backup saved: {Path.GetFileName(safetyBackupPath)}\nPlease restart application to refresh cached catalog.";
+                    lblRestoreResult.Text = $"✓ Database snapshot restored & verified!\n{summaryMessage}\nSafety backup: {Path.GetFileName(safetyBackupPath)}\nPlease restart application to reload all tables.";
                     MessageBox.Show(
-                        $"Database restored successfully from:\n{Path.GetFileName(filePath)}\n\nAn automatic safety backup was saved at:\n{safetyBackupPath}\n\nPlease restart the application to refresh cached state.",
+                        $"Database restored successfully from:\n{Path.GetFileName(filePath)}\n\n{summaryMessage}\n\nAn automatic safety backup was saved at:\n{safetyBackupPath}\n\nPlease restart the application to reload cached state.",
                         "Restore Complete",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information

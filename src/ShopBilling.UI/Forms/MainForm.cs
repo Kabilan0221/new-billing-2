@@ -148,7 +148,7 @@ namespace ShopBilling.UI.Forms
                 AutoScroll = true
             };
 
-            // 14 Dedicated Navigation Sections
+            // 15 Dedicated Navigation Sections
             string[] navItems = new string[]
             {
                 "Dashboard",                 // 0
@@ -163,8 +163,9 @@ namespace ShopBilling.UI.Forms
                 "Stock — F8",                // 9
                 "Estimates & Invoices — F9", // 10
                 "Reports — F10",             // 11
-                "Delete Management",         // 12
-                "Settings"                   // 13
+                "Data Management",           // 12
+                "Settings",                  // 13
+                "Backup & Restore"           // 14
             };
 
             navButtons = new Button[navItems.Length];
@@ -345,7 +346,7 @@ namespace ShopBilling.UI.Forms
             }
             else if (index == 12)
             {
-                // Delete Management & Purge Old Data
+                // Data Management, Diagnostics & Integrity Verification
                 var dataControl = new DataManagementControl(_dataManagementService);
                 dataControl.Dock = DockStyle.Fill;
                 panelContent.Controls.Add(dataControl);
@@ -356,6 +357,13 @@ namespace ShopBilling.UI.Forms
                 var settingsControl = new SettingsControl(_settingsService);
                 settingsControl.Dock = DockStyle.Fill;
                 panelContent.Controls.Add(settingsControl);
+            }
+            else if (index == 14)
+            {
+                // Database Backup & Disaster Recovery Control
+                var backupControl = new BackupRestoreControl();
+                backupControl.Dock = DockStyle.Fill;
+                panelContent.Controls.Add(backupControl);
             }
 
             UpdateProductCountStatus();

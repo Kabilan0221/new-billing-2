@@ -45,6 +45,7 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
   const [isNewEstimateOpen, setIsNewEstimateOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [estimatePrintFormat, setEstimatePrintFormat] = useState<'a4' | 'a5'>('a4');
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
@@ -588,20 +589,59 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
       {/* ---------------- PRINT QUOTATION MODAL ---------------- */}
       {isPrintModalOpen && selectedEstimate && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col border border-slate-300 overflow-hidden">
+          <style>{`
+            @media print {
+              @page {
+                size: ${estimatePrintFormat === 'a5' ? '210mm 148mm' : 'A4 portrait'};
+                margin: ${estimatePrintFormat === 'a5' ? '4mm 6mm' : '8mm 6mm'};
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              #printable-estimate,
+              #printable-estimate * {
+                visibility: visible !important;
+              }
+              #printable-estimate {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 198mm !important;
+                margin: 0 auto !important;
+                padding: 6mm 8mm !important;
+                border: 1px solid #000000 !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                display: block !important;
+              }
+            }
+          `}</style>
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-slate-300 overflow-hidden">
             <div className="bg-[#182b49] text-white px-4 py-2.5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Printer className="w-4 h-4 text-indigo-300" />
                 <h3 className="font-bold text-xs">PRINT PREVIEW — COMMERCIAL ESTIMATE ({selectedEstimate.estimateNumber})</h3>
               </div>
-              <button onClick={() => setIsPrintModalOpen(false)} className="text-slate-300 hover:text-white font-bold">
-                ✕
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={estimatePrintFormat}
+                  onChange={(e) => setEstimatePrintFormat(e.target.value as 'a4' | 'a5')}
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="a4" className="text-slate-900 font-medium">📄 A4 Full Sheet (210×297mm)</option>
+                  <option value="a5" className="text-slate-900 font-medium">📄 A5 Half Sheet (210×148mm - அரை தாள்)</option>
+                </select>
+                <button onClick={() => setIsPrintModalOpen(false)} className="text-slate-300 hover:text-white font-bold p-1">
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {/* Printable A4 Quotation Paper */}
+            {/* Printable Quotation Paper */}
             <div className="flex-1 overflow-y-auto p-6 bg-slate-100 flex justify-center">
-              <div className="bg-white p-8 w-[620px] shadow-md border border-slate-300 text-xs text-slate-900 space-y-4">
+              <div id="printable-estimate" className="bg-white p-8 w-full max-w-[760px] shadow-md border border-slate-300 text-xs text-slate-900 space-y-4">
                 {/* Warning Banner Required by Prompt */}
                 <div className="bg-amber-100 border border-amber-300 p-2 text-center text-amber-900 font-bold text-xs uppercase tracking-wider">
                   ESTIMATE / QUOTATION — NOT A TAX INVOICE

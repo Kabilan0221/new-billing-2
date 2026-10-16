@@ -9,7 +9,12 @@ namespace ShopBilling.UI.Utilities
 {
     public static class InvoicePrintHelper
     {
-        public static void PrintInvoice(InvoiceHeader invoice, bool isThermal = true)
+        public static void PrintInvoice(InvoiceHeader invoice, bool isThermal)
+        {
+            PrintInvoice(invoice, isThermal ? "Thermal80" : "A4");
+        }
+
+        public static void PrintInvoice(InvoiceHeader invoice, string paperFormat = "A4")
         {
             if (invoice == null) return;
 
@@ -18,16 +23,39 @@ namespace ShopBilling.UI.Utilities
                 var pd = new PrintDocument();
                 pd.DocumentName = $"Invoice_{invoice.InvoiceNumber}";
 
-                if (isThermal)
+                string fmt = paperFormat?.Trim() ?? "A4";
+                if (fmt.IndexOf("A5", StringComparison.OrdinalIgnoreCase) >= 0 || fmt.IndexOf("Half", StringComparison.OrdinalIgnoreCase) >= 0 && fmt.IndexOf("Dual", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    // A5 Half Sheet Landscape (210mm x 148mm)
+                    pd.DefaultPageSettings.PaperSize = new PaperSize("A5_HalfSheet", 827, 583);
+                    pd.DefaultPageSettings.Landscape = true;
+                    pd.DefaultPageSettings.Margins = new Margins(15, 15, 15, 15);
+                    pd.PrintPage += (s, e) => RenderA5Invoice(e, invoice);
+                }
+                else if (fmt.IndexOf("Dual", StringComparison.OrdinalIgnoreCase) >= 0 || fmt.IndexOf("2-in-1", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // A4 Dual Half Sheet (2 Invoices on 1 A4 Page)
+                    pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 827, 1169);
+                    pd.DefaultPageSettings.Margins = new Margins(20, 20, 20, 20);
+                    pd.PrintPage += (s, e) => RenderA4DualInvoice(e, invoice);
+                }
+                else if (fmt.IndexOf("104mm", StringComparison.OrdinalIgnoreCase) >= 0 || fmt.IndexOf("4-Inch", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // 104mm width paper (4-inch thermal)
+                    pd.DefaultPageSettings.PaperSize = new PaperSize("Thermal104mm", 410, 1600);
+                    pd.DefaultPageSettings.Margins = new Margins(10, 10, 10, 10);
+                    pd.PrintPage += (s, e) => RenderThermalReceipt(e, invoice, 390);
+                }
+                else if (fmt.IndexOf("Thermal", StringComparison.OrdinalIgnoreCase) >= 0 || fmt.IndexOf("80mm", StringComparison.OrdinalIgnoreCase) >= 0 || fmt.IndexOf("58mm", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     // 80mm width paper
                     pd.DefaultPageSettings.PaperSize = new PaperSize("Thermal80mm", 315, 1200);
                     pd.DefaultPageSettings.Margins = new Margins(10, 10, 10, 10);
-                    pd.PrintPage += (s, e) => RenderThermalReceipt(e, invoice);
+                    pd.PrintPage += (s, e) => RenderThermalReceipt(e, invoice, 295);
                 }
                 else
                 {
-                    // Standard A4 Paper
+                    // Standard A4 Full Page
                     pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 827, 1169);
                     pd.DefaultPageSettings.Margins = new Margins(30, 30, 30, 30);
                     pd.PrintPage += (s, e) => RenderA4Invoice(e, invoice);
@@ -46,11 +74,11 @@ namespace ShopBilling.UI.Utilities
             }
         }
 
-        private static void RenderThermalReceipt(PrintPageEventArgs e, InvoiceHeader inv)
+        private static void RenderThermalReceipt(PrintPageEventArgs e, InvoiceHeader inv, float paperWidth = 295)
         {
             var g = e.Graphics;
             float y = 15;
-            float width = 295;
+            float width = paperWidth;
 
             var titleFont = new Font("Segoe UI", 12f, FontStyle.Bold);
             var subFont = new Font("Segoe UI", 8f, FontStyle.Regular);
@@ -304,6 +332,160 @@ namespace ShopBilling.UI.Utilities
 
             g.DrawString("Authorized Signatory", boldFont, Brushes.Black, new RectangleF(margin + 550, y, 190, 20), sfCenter);
             g.DrawLine(Pens.Black, margin + 550, y - 5, margin + 740, y - 5);
+        }
+
+        private static void RenderA5Invoice(PrintPageEventArgs e, InvoiceHeader inv)
+        {
+            var g = e.Graphics;
+            float margin = 20;
+            float pageWidth = 780;
+            float y = 15;
+
+            var titleFont = new Font("Segoe UI", 12f, FontStyle.Bold);
+            var boldFont = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+            var normalFont = new Font("Segoe UI", 8f, FontStyle.Regular);
+            var smallFont = new Font("Segoe UI", 7.5f, FontStyle.Regular);
+
+            var sfCenter = new StringFormat { Alignment = StringAlignment.Center };
+            var sfRight = new StringFormat { Alignment = StringAlignment.Far };
+
+            // Store Header (Compact Horizontal layout for A5 Landscape)
+            g.DrawString("SRI VENKATESWARA TRADERS (SVT) - TAX INVOICE", titleFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 20), sfCenter);
+            y += 20;
+            g.DrawString("Madam Street, Near Anna Sports Park, Kanchipuram - 631 502 | Ph: 8143 84 8143 / 9941333457 | GSTIN: 33AAAAA0000A1Z5", smallFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 16), sfCenter);
+            y += 18;
+
+            g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);
+            y += 4;
+
+            // Details Row
+            g.DrawString($"Bill No: {inv.InvoiceNumber}", boldFont, Brushes.Black, margin, y);
+            g.DrawString($"Date: {inv.InvoiceDate:dd/MM/yyyy hh:mm tt}", normalFont, Brushes.Black, margin + 170, y);
+            g.DrawString($"Customer: {inv.CustomerName} ({inv.CustomerMobile ?? "N/A"})", boldFont, Brushes.Black, margin + 370, y);
+            g.DrawString($"GSTIN: {inv.CustomerGstin ?? "Unregistered"}", normalFont, Brushes.Black, margin + 630, y);
+            y += 18;
+
+            g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);
+            y += 4;
+
+            // Table Header
+            g.DrawString("#", boldFont, Brushes.Black, margin + 5, y);
+            g.DrawString("Item Description", boldFont, Brushes.Black, margin + 30, y);
+            g.DrawString("Qty", boldFont, Brushes.Black, margin + 360, y);
+            g.DrawString("Rate (₹)", boldFont, Brushes.Black, margin + 440, y);
+            g.DrawString("GST%", boldFont, Brushes.Black, margin + 530, y);
+            g.DrawString("Total (₹)", boldFont, Brushes.Black, new RectangleF(margin + 620, y, 150, 16), sfRight);
+            y += 18;
+            g.DrawLine(Pens.Gray, margin, y, margin + pageWidth, y);
+            y += 4;
+
+            int idx = 1;
+            foreach (var it in inv.Items.Take(10))
+            {
+                g.DrawString(idx.ToString(), normalFont, Brushes.Black, margin + 5, y);
+                g.DrawString(it.ProductName, boldFont, Brushes.Black, margin + 30, y);
+                g.DrawString($"{it.Quantity} {it.Unit}", normalFont, Brushes.Black, margin + 360, y);
+                g.DrawString($"₹{it.Rate:F2}", normalFont, Brushes.Black, margin + 440, y);
+                g.DrawString($"{it.TaxRate}%", normalFont, Brushes.Black, margin + 530, y);
+                g.DrawString($"₹{it.LineTotal:F2}", boldFont, Brushes.Black, new RectangleF(margin + 620, y, 150, 16), sfRight);
+                y += 16;
+                idx++;
+            }
+
+            g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);
+            y += 6;
+
+            // Summary row
+            g.DrawString($"Total Items: {inv.Items.Count} | Taxable: ₹{inv.TaxableAmount:F2} | CGST: ₹{inv.CgstAmount:F2} | SGST: ₹{inv.SgstAmount:F2} | RoundOff: ₹{inv.RoundOff:F2}", normalFont, Brushes.Black, margin, y);
+            g.DrawString($"NET TOTAL: ₹{inv.GrandTotal:F2}", new Font("Segoe UI", 10f, FontStyle.Bold), Brushes.Black, new RectangleF(margin + 550, y, 220, 18), sfRight);
+            y += 24;
+
+            g.DrawString($"Payment: {inv.PaymentStatus} (Paid: ₹{inv.AmountPaid:F2}) | Thank you! Visit again.", smallFont, Brushes.Black, margin, y);
+            g.DrawString("For SRI VENKATESWARA TRADERS - Authorized Signatory", smallFont, Brushes.Black, new RectangleF(margin + 420, y, 350, 16), sfRight);
+        }
+
+        private static void RenderA4DualInvoice(PrintPageEventArgs e, InvoiceHeader inv)
+        {
+            var g = e.Graphics;
+            float margin = 30;
+            float pageWidth = 760;
+
+            // Render Top Copy (Original)
+            RenderHalfSheetCopy(g, inv, margin, 25, pageWidth, "ORIGINAL FOR RECIPIENT");
+
+            // Scissor Divider Line
+            float cutY = 560;
+            using (var dashedPen = new Pen(Color.Gray, 1) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
+            {
+                g.DrawLine(dashedPen, margin, cutY, margin + pageWidth, cutY);
+            }
+            var scissorFont = new Font("Segoe UI", 8f, FontStyle.Italic);
+            var sfCenter = new StringFormat { Alignment = StringAlignment.Center };
+            g.DrawString("✂ - - - - - - - - - - - - - - FOLD & CUT HERE / வெட்டும் கோடு - - - - - - - - - - - - - - ✂", scissorFont, Brushes.Gray, new RectangleF(margin, cutY - 7, pageWidth, 16), sfCenter);
+
+            // Render Bottom Copy (Duplicate for Store)
+            RenderHalfSheetCopy(g, inv, margin, 580, pageWidth, "DUPLICATE / STORE COPY");
+        }
+
+        private static void RenderHalfSheetCopy(Graphics g, InvoiceHeader inv, float margin, float startY, float pageWidth, string copyLabel)
+        {
+            float y = startY;
+            var boldFont = new Font("Segoe UI", 8.5f, FontStyle.Bold);
+            var normalFont = new Font("Segoe UI", 8f, FontStyle.Regular);
+            var smallFont = new Font("Segoe UI", 7.5f, FontStyle.Regular);
+            var sfCenter = new StringFormat { Alignment = StringAlignment.Center };
+            var sfRight = new StringFormat { Alignment = StringAlignment.Far };
+
+            // Header Banner
+            g.DrawString($"SRI VENKATESWARA TRADERS  [{copyLabel}]", boldFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 16), sfCenter);
+            y += 16;
+            g.DrawString("Madam Street, Kanchipuram - 631 502 | Ph: 8143 84 8143 / 9941333457 | GSTIN: 33AAAAA0000A1Z5", smallFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 14), sfCenter);
+            y += 16;
+
+            g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);
+            y += 4;
+
+            g.DrawString($"Bill No: {inv.InvoiceNumber}", boldFont, Brushes.Black, margin, y);
+            g.DrawString($"Date: {inv.InvoiceDate:dd/MM/yyyy hh:mm tt}", normalFont, Brushes.Black, margin + 180, y);
+            g.DrawString($"Customer: {inv.CustomerName} ({inv.CustomerMobile ?? "N/A"})", boldFont, Brushes.Black, margin + 400, y);
+            y += 16;
+
+            g.DrawLine(Pens.Gray, margin, y, margin + pageWidth, y);
+            y += 4;
+
+            // Table headers
+            g.DrawString("#", boldFont, Brushes.Black, margin + 5, y);
+            g.DrawString("Item", boldFont, Brushes.Black, margin + 30, y);
+            g.DrawString("Qty", boldFont, Brushes.Black, margin + 360, y);
+            g.DrawString("Rate", boldFont, Brushes.Black, margin + 450, y);
+            g.DrawString("GST%", boldFont, Brushes.Black, margin + 540, y);
+            g.DrawString("Total (₹)", boldFont, Brushes.Black, new RectangleF(margin + 620, y, 130, 16), sfRight);
+            y += 16;
+            g.DrawLine(Pens.Gray, margin, y, margin + pageWidth, y);
+            y += 4;
+
+            int idx = 1;
+            foreach (var it in inv.Items.Take(8))
+            {
+                g.DrawString(idx.ToString(), normalFont, Brushes.Black, margin + 5, y);
+                g.DrawString(it.ProductName, boldFont, Brushes.Black, margin + 30, y);
+                g.DrawString($"{it.Quantity} {it.Unit}", normalFont, Brushes.Black, margin + 360, y);
+                g.DrawString($"₹{it.Rate:F2}", normalFont, Brushes.Black, margin + 450, y);
+                g.DrawString($"{it.TaxRate}%", normalFont, Brushes.Black, margin + 540, y);
+                g.DrawString($"₹{it.LineTotal:F2}", boldFont, Brushes.Black, new RectangleF(margin + 620, y, 130, 16), sfRight);
+                y += 15;
+                idx++;
+            }
+
+            g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);
+            y += 5;
+
+            g.DrawString($"Taxable: ₹{inv.TaxableAmount:F2} | CGST: ₹{inv.CgstAmount:F2} | SGST: ₹{inv.SgstAmount:F2}", smallFont, Brushes.Black, margin, y);
+            g.DrawString($"GRAND TOTAL: ₹{inv.GrandTotal:F2}", new Font("Segoe UI", 9.5f, FontStyle.Bold), Brushes.Black, new RectangleF(margin + 520, y, 230, 18), sfRight);
+            y += 18;
+
+            g.DrawString($"Payment: {inv.PaymentStatus} | Paid: ₹{inv.AmountPaid:F2}", smallFont, Brushes.Black, margin, y);
+            g.DrawString("Authorized Signatory", smallFont, Brushes.Black, new RectangleF(margin + 550, y, 200, 14), sfRight);
         }
     }
 }

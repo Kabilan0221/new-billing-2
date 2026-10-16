@@ -232,10 +232,14 @@ export const SettingsView: React.FC = () => {
                 <select
                   value={settings.receiptPaperSize}
                   onChange={(e) => setSettings({ ...settings, receiptPaperSize: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs bg-slate-50 focus:bg-white"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs bg-slate-50 focus:bg-white cursor-pointer font-medium"
                 >
-                  <option value="80mm Thermal">80mm Thermal Receipt (POS Roll)</option>
-                  <option value="A4 Full Page">A4 Full Page (Standard Laser/Inkjet)</option>
+                  <option value="A4 Full Page">A4 Full Page (210 × 297 mm - Laser/Inkjet)</option>
+                  <option value="A5 Half Sheet">A5 Half Sheet (210 × 148 mm - அரை தாள் / Half Page)</option>
+                  <option value="A4 Dual Half-Sheet">A4 Dual Half-Sheet (2 Invoices on 1 A4 Page - 2-in-1)</option>
+                  <option value="104mm (4-Inch) Thermal">104mm (4-Inch) Thermal POS Printer</option>
+                  <option value="80mm Thermal">80mm (3-Inch) Thermal POS Roll</option>
+                  <option value="58mm Thermal">58mm (2-Inch) Portable Thermal Roll</option>
                 </select>
               </div>
 
