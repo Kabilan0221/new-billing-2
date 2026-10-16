@@ -535,16 +535,25 @@ export interface BarcodePrintConfig {
   labelWidthMm: number;
   labelHeightMm: number;
   labelsPerRow: number;
+  labelsPerColumn: number;
   horizontalGapMm: number;
   verticalGapMm: number;
   pageMarginLeftMm: number;
+  pageMarginRightMm: number;
   pageMarginTopMm: number;
+  pageMarginBottomMm?: number;
   includeProductName: boolean;
   includePrice: boolean;
   includeBarcodeText: boolean;
   includeStoreName: boolean;
+  includeLogo: boolean;
+  includeAddress: boolean;
   storeName: string;
+  storeSubtitle?: string;
+  storeAddress?: string;
+  storePhone?: string;
   currencySymbol: string;
+  preset?: string;
 }
 
 export interface DashboardMetrics {
@@ -678,8 +687,14 @@ export interface ReportSummary {
 
 export interface AppSettings {
   storeName: string;
+  storeTamilName?: string;
+  storeSubtitle?: string;
+  storeOwner?: string;
+  storeBlessing?: string;
   storeAddress: string;
   storePhone: string;
+  storeWhatsApp?: string;
+  storeLandline?: string;
   storeEmail: string;
   gstNumber: string;
   currencySymbol: string;

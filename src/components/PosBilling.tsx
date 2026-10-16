@@ -41,6 +41,7 @@ import {
 import { db } from '../services/dbEngine';
 import { playScannerBeep } from '../services/soundEffects';
 import { ProductDialog } from './ProductDialog';
+import { SVTLogo } from './SVTLogo';
 import {
   Product,
   Customer,
@@ -121,7 +122,8 @@ export const PosBilling: React.FC<PosBillingProps> = ({
 
   // Modals & Previews
   const [printModalInvoice, setPrintModalInvoice] = useState<InvoiceHeader | null>(null);
-  const [printFormat, setPrintFormat] = useState<'thermal' | 'a4'>('thermal');
+  const [printFormat, setPrintFormat] = useState<'thermal-4inch' | 'thermal-3inch' | 'thermal-2inch' | 'a4' | 'thermal'>('thermal-4inch');
+  const storeSettings = db.getAppSettings();
   const [viewDetailsInvoice, setViewDetailsInvoice] = useState<InvoiceHeader | null>(null);
   const [cancelModalInvoice, setCancelModalInvoice] = useState<InvoiceHeader | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -620,11 +622,18 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     };
   }, [isCameraOpen]);
 
-  // F9 Quick key listener (Single tap = Print Preview, Double tap = Direct Thermal Print)
+  // F9 Quick key listener (F9 click / press panna direct thermal print akunum)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F9') {
         e.preventDefault();
+        e.stopPropagation();
+        if (printModalInvoice) {
+          // If modal is open, F9 prints immediately
+          playScannerBeep('print');
+          window.print();
+          return;
+        }
         if (cartItems.length === 0) {
           playScannerBeep('error');
           setAlertMessage({ type: 'warning', text: 'Cannot checkout: Cart is empty. Add products to begin.' });
@@ -632,23 +641,14 @@ export const PosBilling: React.FC<PosBillingProps> = ({
           return;
         }
 
-        const now = Date.now();
-        if (now - lastF9PressRef.current < 450) {
-          // Double tap F9 -> Direct Thermal Print!
-          if (checkoutClickTimerRef.current) {
-            clearTimeout(checkoutClickTimerRef.current);
-            checkoutClickTimerRef.current = null;
-          }
-          lastF9PressRef.current = 0;
-          handleFinalizeBill('thermal', true);
-        } else {
-          // Single tap F9 -> Open Print Preview
-          lastF9PressRef.current = now;
-          checkoutClickTimerRef.current = setTimeout(() => {
-            handleFinalizeBill('thermal', false);
-            checkoutClickTimerRef.current = null;
-          }, 280);
-        }
+        // F9 click / press -> Direct 4-inch Thermal Print!
+        handleFinalizeBill(printFormat, true);
+      }
+      if (e.key === 'Enter' && printModalInvoice) {
+        // Enter in print modal also triggers print
+        e.preventDefault();
+        playScannerBeep('print');
+        window.print();
       }
       if (e.key === 'Escape') {
         if (printModalInvoice) {
@@ -686,36 +686,16 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     isQuickAddOpen,
   ]);
 
-  // Checkout Single Click & Double Click handlers
-  const handleCheckoutSingleClick = () => {
+  // Checkout F9 handler (Single click or F9 key triggers direct 4-inch thermal print)
+  const handleCheckoutF9 = () => {
     if (cartItems.length === 0) {
       playScannerBeep('error');
       setAlertMessage({ type: 'warning', text: 'Cannot checkout: Cart is empty. Add products to begin.' });
       setTimeout(() => setAlertMessage(null), 2500);
       return;
     }
-    if (checkoutClickTimerRef.current) {
-      clearTimeout(checkoutClickTimerRef.current);
-    }
-    // 260ms delay to distinguish single click from double click
-    checkoutClickTimerRef.current = setTimeout(() => {
-      // Single click: Show Print Preview modal (f9 click panna print preview varunum)
-      handleFinalizeBill('thermal', false);
-      checkoutClickTimerRef.current = null;
-    }, 260);
-  };
-
-  const handleCheckoutDoubleClick = () => {
-    if (checkoutClickTimerRef.current) {
-      clearTimeout(checkoutClickTimerRef.current);
-      checkoutClickTimerRef.current = null;
-    }
-    if (cartItems.length === 0) {
-      playScannerBeep('error');
-      return;
-    }
-    // Double click: Direct Thermal Print (2 double click paanaa termal print akunum)
-    handleFinalizeBill('thermal', true);
+    // Direct 4-inch thermal print
+    handleFinalizeBill(printFormat, true);
   };
 
   // -------------------------------------------------------------
@@ -934,7 +914,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   // -------------------------------------------------------------
   // FINALIZE & PRINT INVOICE
   // -------------------------------------------------------------
-  const handleFinalizeBill = (format: 'thermal' | 'a4', autoPrint = false) => {
+  const handleFinalizeBill = (format: string = 'thermal-4inch', autoPrint = true) => {
     if (cartItems.length === 0) {
       playScannerBeep('error');
       setAlertMessage({ type: 'error', text: 'Cannot finalize bill: Cart is empty.' });
@@ -994,10 +974,10 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     setTimeout(() => setAlertMessage(null), 4000);
 
     // Open print preview modal
-    setPrintFormat(format);
+    setPrintFormat(format as any);
     setPrintModalInvoice(savedInvoice);
 
-    // If autoPrint requested (e.g. 2 double clicks), immediately trigger thermal print dialog
+    // If autoPrint requested (e.g. F9 click / press), immediately trigger 4-inch thermal print dialog
     if (autoPrint) {
       setTimeout(() => {
         window.print();
@@ -1750,24 +1730,24 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   </div>
                 </div>
 
-                {/* Checkout (F9) button */}
+                {/* Checkout & Print (F9) button */}
                 <button
                   type="button"
-                  onClick={handleCheckoutSingleClick}
-                  onDoubleClick={handleCheckoutDoubleClick}
+                  onClick={handleCheckoutF9}
                   disabled={cartItems.length === 0}
-                  className={`w-full py-1 mt-1 rounded font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none h-8.5 ${
+                  title="F9 - Instant 4-Inch Thermal Print"
+                  className={`w-full py-1.5 mt-1 rounded font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none h-9 ${
                     cartItems.length === 0
                       ? 'bg-[#b0bec5] text-white cursor-not-allowed opacity-80'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-[0.99]'
+                      : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-md active:scale-[0.99]'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 leading-none">
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>Checkout (F9)</span>
+                    <Printer className="w-4 h-4" />
+                    <span className="text-sm font-extrabold tracking-wide">Checkout & Print (F9)</span>
                   </div>
-                  <span className="text-[8.5px] font-normal text-blue-100 opacity-90 leading-tight">
-                    Click: Preview · 2x Click: Thermal Print
+                  <span className="text-[9px] font-medium text-emerald-100 opacity-95 leading-tight">
+                    4-Inch Thermal Printer Default · 1-Click Print
                   </span>
                 </button>
               </div>
@@ -2054,10 +2034,10 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                           </button>
                           <button
                             onClick={() => {
-                              setPrintFormat('thermal');
+                              setPrintFormat('thermal-4inch');
                               setPrintModalInvoice(inv);
                             }}
-                            title="Reprint 80mm Thermal Receipt"
+                            title="Reprint 4-inch Thermal Receipt (Default)"
                             className="p-1 text-slate-600 hover:text-emerald-700 rounded hover:bg-slate-100"
                           >
                             <Printer className="w-3.5 h-3.5" />
@@ -2241,196 +2221,400 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       {/* ========================================================= */}
       {/* MODAL 1: PRINT PREVIEW (THERMAL 80MM / A4 INVOICE)       */}
       {/* ========================================================= */}
-      {printModalInvoice && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-3 bg-[#1e395b] text-white flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-2">
-                <Printer className="w-4 h-4" />
-                <span className="font-bold text-sm">
-                  {printFormat === 'thermal' ? '3-inch (80mm) Thermal Receipt' : 'Standard A4 GST Tax Invoice'}
-                </span>
-                <span className="bg-white/20 px-1.5 py-0.2 rounded font-mono text-xs">
-                  {printModalInvoice.invoiceNumber}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPrintFormat(printFormat === 'thermal' ? 'a4' : 'thermal')}
-                  className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-semibold flex items-center gap-1"
-                >
-                  Switch to {printFormat === 'thermal' ? 'A4 Invoice' : 'Thermal (80mm)'}
-                </button>
-                <button
-                  onClick={() => setPrintModalInvoice(null)}
-                  className="p-1 hover:bg-white/10 rounded text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+      {/* ========================================================= */}
+      {/* MODAL 1: PRINT PREVIEW (4-INCH THERMAL / A4 INVOICE)      */}
+      {/* ========================================================= */}
+      {printModalInvoice && (() => {
+        const hasGst = Boolean(
+          (printModalInvoice.taxableAmount > 0 &&
+            (printModalInvoice.cgstAmount > 0 ||
+              printModalInvoice.sgstAmount > 0 ||
+              printModalInvoice.igstAmount > 0)) ||
+          printModalInvoice.items.some((it) => (it.taxRate || 0) > 0)
+        );
+        const totalQuantity = printModalInvoice.items.reduce(
+          (sum, it) => sum + (Number(it.quantity) || 0),
+          0
+        );
+        const totalItemsCount = printModalInvoice.items.length;
+        const modalMaxWidth = printFormat === 'a4' ? 'max-w-5xl' : 'max-w-2xl';
+        const thermalContainerWidth =
+          printFormat === 'thermal-2inch'
+            ? 'w-[260px]'
+            : printFormat === 'thermal-3inch'
+            ? 'w-[360px]'
+            : 'w-full max-w-[500px] sm:w-[520px]';
 
-            {/* Modal Document Body */}
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-100 flex justify-center">
-              {printFormat === 'thermal' ? (
-                /* 80mm Thermal Receipt Preview */
-                <div
-                  id="printable-thermal"
-                  className="w-[340px] bg-white p-4 text-[11px] font-mono leading-tight shadow-md border border-slate-300 text-black select-text"
-                >
-                  <div className="text-center pb-2 border-b border-dashed border-black">
-                    <div className="font-bold text-sm">SRI MEENAKSHI SUPERMARKET</div>
-                    <div>124, GST Road, Chromepet, Chennai - 600044</div>
-                    <div>Phone: +91 98401 23456</div>
-                    <div className="font-bold">GSTIN: 33AAAAA0000A1Z5</div>
-                    <div>STATE: 33 - TAMIL NADU</div>
-                  </div>
+        const invoiceDateObj = new Date(printModalInvoice.invoiceDate);
+        const invoiceDateStr = invoiceDateObj.toLocaleDateString('en-IN');
+        const invoiceTimeStr = invoiceDateObj.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
 
-                  <div className="py-2 border-b border-dashed border-black text-[10px]">
-                    <div className="flex justify-between">
-                      <span>BILL #: {printModalInvoice.invoiceNumber}</span>
-                      <span>
-                        {new Date(printModalInvoice.invoiceDate).toLocaleDateString('en-IN')}{' '}
-                        {new Date(printModalInvoice.invoiceDate).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <div>CUST: {printModalInvoice.customerName}</div>
-                    {printModalInvoice.customerMobile && <div>MOB: {printModalInvoice.customerMobile}</div>}
-                    {printModalInvoice.customerGstin && <div>CUST GSTIN: {printModalInvoice.customerGstin}</div>}
-                  </div>
-
-                  {/* Items List */}
-                  <table className="w-full text-left my-2 text-[10px]">
-                    <thead>
-                      <tr className="border-b border-black">
-                        <th className="py-1">ITEM</th>
-                        <th className="py-1 text-center">QTY</th>
-                        <th className="py-1 text-right">RATE</th>
-                        <th className="py-1 text-right">TOTAL</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-dotted divide-slate-300">
-                      {printModalInvoice.items.map((it, idx) => (
-                        <tr key={idx}>
-                          <td className="py-1">
-                            <div className="font-semibold">{it.productName}</div>
-                            {it.discountAmount > 0 && (
-                              <div className="text-[9px] text-slate-600">Disc: -₹{it.discountAmount.toFixed(2)}</div>
-                            )}
-                          </td>
-                          <td className="py-1 text-center font-mono">
-                            {it.quantity} {it.unit}
-                          </td>
-                          <td className="py-1 text-right font-mono">₹{it.rate.toFixed(2)}</td>
-                          <td className="py-1 text-right font-mono font-bold">₹{it.lineTotal.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* Summary Breakup */}
-                  <div className="border-t border-dashed border-black pt-2 space-y-1 text-[10px]">
-                    <div className="flex justify-between">
-                      <span>Gross Amount:</span>
-                      <span className="font-mono">₹{printModalInvoice.grossAmount.toFixed(2)}</span>
-                    </div>
-                    {printModalInvoice.itemDiscount > 0 && (
-                      <div className="flex justify-between">
-                        <span>Item Discount:</span>
-                        <span className="font-mono">-₹{printModalInvoice.itemDiscount.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {printModalInvoice.billDiscount > 0 && (
-                      <div className="flex justify-between">
-                        <span>Bill Discount:</span>
-                        <span className="font-mono">-₹{printModalInvoice.billDiscount.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span>Taxable Value:</span>
-                      <span className="font-mono">₹{printModalInvoice.taxableAmount.toFixed(2)}</span>
-                    </div>
-                    {!printModalInvoice.isInterstate ? (
-                      <>
-                        <div className="flex justify-between">
-                          <span>CGST:</span>
-                          <span className="font-mono">₹{printModalInvoice.cgstAmount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>SGST:</span>
-                          <span className="font-mono">₹{printModalInvoice.sgstAmount.toFixed(2)}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex justify-between">
-                        <span>IGST:</span>
-                        <span className="font-mono">₹{printModalInvoice.igstAmount.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {printModalInvoice.otherCharges > 0 && (
-                      <div className="flex justify-between">
-                        <span>Other Charges:</span>
-                        <span className="font-mono">₹{printModalInvoice.otherCharges.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span>Round Off:</span>
-                      <span className="font-mono">₹{printModalInvoice.roundOff.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-xs border-t border-b border-black py-1">
-                      <span>GRAND TOTAL:</span>
-                      <span className="font-mono">₹{printModalInvoice.grandTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span>Paid ({printModalInvoice.payments[0]?.paymentMethod || 'Cash'}):</span>
-                      <span className="font-mono">₹{printModalInvoice.amountPaid.toFixed(2)}</span>
-                    </div>
-                    {printModalInvoice.cashChange ? (
-                      <div className="flex justify-between font-bold text-[10px]">
-                        <span>Change Returned:</span>
-                        <span className="font-mono">₹{printModalInvoice.cashChange.toFixed(2)}</span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="text-center pt-3 mt-3 border-t border-dashed border-black space-y-1">
-                    <div className="font-bold">*** THANK YOU, VISIT AGAIN! ***</div>
-                    <div className="text-[9px] text-slate-600">Goods once sold cannot be returned after 7 days.</div>
-                    <div className="text-[9px] font-mono tracking-widest pt-1">
-                      ||| | ||||| || |||| ||| |||||||
-                    </div>
-                  </div>
+        return (
+          <div className="print-modal-root fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            {/* Embedded Print CSS for exact 4-inch thermal page & full paper width */}
+            <style>{`
+              @media print {
+                @page {
+                  size: ${printFormat === 'a4' ? 'A4 portrait' : printFormat === 'thermal-3inch' ? '80mm auto' : printFormat === 'thermal-2inch' ? '58mm auto' : '104mm auto'};
+                  margin: ${printFormat === 'a4' ? '8mm 6mm' : '0mm'};
+                }
+                *, *::before, *::after {
+                  box-sizing: border-box !important;
+                }
+                html, body {
+                  width: 100% !important;
+                  height: auto !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: #ffffff !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                body * {
+                  visibility: hidden !important;
+                }
+                .print-modal-root,
+                .print-modal-card,
+                .print-modal-body {
+                  position: static !important;
+                  display: block !important;
+                  overflow: visible !important;
+                  max-height: none !important;
+                  height: auto !important;
+                  width: 100% !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  background: transparent !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  visibility: visible !important;
+                }
+                #printable-thermal,
+                #printable-thermal * {
+                  visibility: visible !important;
+                }
+                #printable-thermal {
+                  position: relative !important;
+                  left: auto !important;
+                  top: auto !important;
+                  width: 100% !important;
+                  min-width: 100% !important;
+                  max-width: ${printFormat === 'thermal-3inch' ? '80mm' : printFormat === 'thermal-2inch' ? '58mm' : '104mm'} !important;
+                  margin: 0 auto !important;
+                  padding: 2mm 3mm 15mm 3mm !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  overflow: visible !important;
+                  box-sizing: border-box !important;
+                  display: block !important;
+                }
+                #printable-a4,
+                #printable-a4 * {
+                  visibility: visible !important;
+                }
+                #printable-a4 {
+                  position: relative !important;
+                  left: auto !important;
+                  top: auto !important;
+                  width: 100% !important;
+                  max-width: 195mm !important;
+                  margin: 0 auto !important;
+                  padding: 6mm 8mm !important;
+                  border: 1px solid #000000 !important;
+                  box-shadow: none !important;
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  overflow: visible !important;
+                  display: block !important;
+                  box-sizing: border-box !important;
+                }
+              }
+            `}</style>
+            <div className={`print-modal-card bg-white rounded-lg shadow-2xl ${modalMaxWidth} w-full max-h-[92vh] flex flex-col overflow-hidden transition-all duration-200`}>
+              {/* Modal Header */}
+              <div className="print-modal-header p-3 bg-[#1e395b] text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-emerald-400" />
+                  <span className="font-bold text-sm">
+                    {printFormat === 'a4'
+                      ? 'Standard A4 GST Tax Invoice'
+                      : printFormat === 'thermal-3inch'
+                      ? '3-Inch (80mm) Thermal Receipt'
+                      : printFormat === 'thermal-2inch'
+                      ? '2-Inch (58mm) Thermal Receipt'
+                      : '4-Inch (104mm) Thermal Receipt [DEFAULT]'}
+                  </span>
+                  <span className="bg-white/20 px-1.5 py-0.2 rounded font-mono text-xs">
+                    {printModalInvoice.invoiceNumber}
+                  </span>
                 </div>
-              ) : (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={printFormat}
+                    onChange={(e) => setPrintFormat(e.target.value as any)}
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded px-2 py-1 text-xs font-semibold focus:outline-none cursor-pointer"
+                  >
+                    <option value="thermal-4inch" className="text-slate-900 font-medium">4-Inch Thermal (104mm) [DEFAULT]</option>
+                    <option value="thermal-3inch" className="text-slate-900 font-medium">3-Inch Thermal (80mm)</option>
+                    <option value="thermal-2inch" className="text-slate-900 font-medium">2-Inch Thermal (58mm)</option>
+                    <option value="a4" className="text-slate-900 font-medium">A4 GST Tax Invoice</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setPrintModalInvoice(null)}
+                    className="p-1 hover:bg-white/20 rounded text-white cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Document Body */}
+              <div className="print-modal-body flex-1 overflow-y-auto p-4 bg-slate-100 flex justify-center">
+                {printFormat !== 'a4' ? (
+                  /* Thermal Receipt Preview (4-inch 104mm default, full paper width) */
+                  <div
+                    id="printable-thermal"
+                    className={`${thermalContainerWidth} bg-white p-4 pb-8 text-xs font-mono leading-tight shadow-md border border-slate-300 text-black select-text`}
+                  >
+                    {/* Store Heading Name in English only, no logo, no Tamil subtitle */}
+                    <div className="text-center pb-2.5 border-b-2 border-dashed border-black">
+                      <div className="font-black text-xl uppercase tracking-wider text-black leading-tight">
+                        {storeSettings.storeName || 'SRI VENKATESWARA TRADERS'}
+                      </div>
+                      {/* Address: Madam Street on line 1, Kanchipuram - 631 502 on separate line 2 */}
+                      <div className="text-xs text-black font-semibold mt-1 leading-tight">
+                        மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில்
+                      </div>
+                      <div className="text-xs text-black font-bold leading-tight">
+                        காஞ்சிபுரம் - 631 502.
+                      </div>
+                      {/* Phone Numbers strictly as requested: Ph: 8143 84 8143 / 9941333457 */}
+                      <div className="text-xs font-bold text-black font-mono mt-1">
+                        Ph: 8143 84 8143 / 9941333457
+                      </div>
+                      {/* GST Number added */}
+                      <div className="text-xs font-extrabold text-black font-mono mt-0.5">
+                        GSTIN: {storeSettings.gstNumber || '33AAAAA0000A1Z5'}
+                      </div>
+                      {/* ONLY show TAX INVOICE if GST entered (RETAIL BILL / CASH ESTIMATE removed completely) */}
+                      {hasGst && (
+                        <div className="mt-1">
+                          <span className="font-extrabold text-xs uppercase px-2.5 py-0.5 border border-black inline-block tracking-wider bg-slate-50">
+                            TAX INVOICE
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bill No, Date & Time */}
+                    <div className="py-2 border-b border-dashed border-black text-xs font-mono">
+                      <div className="flex justify-between items-center font-bold">
+                        <span>BILL NO: <span className="font-extrabold">{printModalInvoice.invoiceNumber}</span></span>
+                        <div className="text-right">
+                          <span>DATE: {invoiceDateStr}</span>
+                          <span className="ml-3 font-extrabold">TIME: {invoiceTimeStr}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <div>
+                          <span className="font-bold">CUSTOMER: </span>
+                          <span>{printModalInvoice.customerName}</span>
+                        </div>
+                        {printModalInvoice.customerMobile && (
+                          <div>
+                            <span className="font-bold">MOB: </span>
+                            <span>{printModalInvoice.customerMobile}</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* ONLY MENTION CUSTOMER GST IF GST ENTERED */}
+                      {hasGst && printModalInvoice.customerGstin && (
+                        <div className="mt-0.5 font-bold">
+                          <span>CUST GSTIN: </span>
+                          <span>{printModalInvoice.customerGstin}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Items List */}
+                    <table className="w-full text-left my-2 text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-black text-xs font-bold uppercase">
+                          <th className="py-1 w-7 text-center">#</th>
+                          <th className="py-1">ITEM DESCRIPTION</th>
+                          <th className="py-1 text-center w-16">QTY</th>
+                          <th className="py-1 text-right w-20">RATE</th>
+                          {hasGst && <th className="py-1 text-center w-14">GST%</th>}
+                          <th className="py-1 text-right w-24">TOTAL</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dotted divide-slate-400">
+                        {printModalInvoice.items.map((it, idx) => (
+                          <tr key={idx} className="align-top">
+                            <td className="py-1.5 text-center text-[11px] text-slate-700">{idx + 1}</td>
+                            <td className="py-1.5 pr-1">
+                              <div className="font-bold text-black">{it.productName}</div>
+                              {it.discountAmount > 0 && (
+                                <div className="text-[10px] text-slate-600">Disc: -₹{it.discountAmount.toFixed(2)}</div>
+                              )}
+                            </td>
+                            <td className="py-1.5 text-center font-mono font-bold">
+                              {it.quantity} {it.unit}
+                            </td>
+                            <td className="py-1.5 text-right font-mono">₹{it.rate.toFixed(2)}</td>
+                            {hasGst && (
+                              <td className="py-1.5 text-center font-mono text-[11px]">{it.taxRate}%</td>
+                            )}
+                            <td className="py-1.5 text-right font-mono font-bold text-black">
+                              ₹{it.lineTotal.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Summary Breakup */}
+                    <div className="border-t-2 border-dashed border-black pt-2 space-y-1.5 text-xs">
+                      {/* Prominent TOTAL ITEMS & TOTAL QTY */}
+                      <div className="flex justify-between items-center py-2 px-2 bg-slate-50 border-b border-dotted border-black">
+                        <span className="font-bold text-xs text-slate-800">
+                          TOTAL ITEMS: <span className="font-mono text-sm font-extrabold">{totalItemsCount}</span>
+                        </span>
+                        <span className="font-black text-sm text-black">
+                          TOTAL QTY: <span className="font-mono text-base font-black">{totalQuantity}</span>
+                        </span>
+                      </div>
+
+                      {/* Bill Discount if any */}
+                      {printModalInvoice.billDiscount > 0 && (
+                        <div className="flex justify-between text-xs px-1">
+                          <span>Bill Discount:</span>
+                          <span className="font-mono font-bold">-₹{printModalInvoice.billDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* ONLY IF GST ENTERED: Mention GST details & breakdown */}
+                      {hasGst && (
+                        <div className="border-y border-dotted border-black py-1.5 px-1 space-y-1 text-[11px] bg-amber-50/40">
+                          <div className="flex justify-between">
+                            <span>Taxable Amount (GST Base):</span>
+                            <span className="font-mono">₹{printModalInvoice.taxableAmount.toFixed(2)}</span>
+                          </div>
+                          {!printModalInvoice.isInterstate ? (
+                            <>
+                              <div className="flex justify-between">
+                                <span>CGST:</span>
+                                <span className="font-mono">₹{printModalInvoice.cgstAmount.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>SGST:</span>
+                                <span className="font-mono">₹{printModalInvoice.sgstAmount.toFixed(2)}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex justify-between">
+                              <span>IGST:</span>
+                              <span className="font-mono">₹{printModalInvoice.igstAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-bold text-xs pt-0.5 border-t border-dotted border-slate-300">
+                            <span>Total GST Amount:</span>
+                            <span className="font-mono">
+                              ₹{(printModalInvoice.cgstAmount + printModalInvoice.sgstAmount + printModalInvoice.igstAmount).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Round off if any */}
+                      {Math.abs(printModalInvoice.roundOff) > 0.001 && (
+                        <div className="flex justify-between text-[11px] px-1">
+                          <span>Round Off:</span>
+                          <span className="font-mono">₹{printModalInvoice.roundOff.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* GRAND TOTAL */}
+                      <div className="flex justify-between items-center font-black border-t-2 border-b-2 border-black py-2 px-1">
+                        <span className="tracking-wide text-sm font-extrabold">GRAND TOTAL:</span>
+                        <span className="font-mono text-xl font-black text-black">
+                          ₹{printModalInvoice.grandTotal.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Payment Info */}
+                      <div className="flex justify-between text-xs px-1 pt-0.5">
+                        <span>Payment ({printModalInvoice.payments[0]?.paymentMethod || 'Cash'}):</span>
+                        <span className="font-mono font-bold">₹{printModalInvoice.amountPaid.toFixed(2)}</span>
+                      </div>
+                      {printModalInvoice.cashChange ? (
+                        <div className="flex justify-between font-bold text-xs px-1">
+                          <span>Change Returned:</span>
+                          <span className="font-mono font-bold">₹{printModalInvoice.cashChange.toFixed(2)}</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="text-center pt-3 mt-3 border-t-2 border-dashed border-black space-y-1 bg-white">
+                      <div className="font-bold text-xs tracking-wider">*** THANK YOU, VISIT AGAIN! ***</div>
+                      <div className="text-[10px] font-mono tracking-widest pt-1">
+                        ||| | ||||| || |||| ||| |||||||
+                      </div>
+                      {/* Thermal printer paper cutter feed buffer */}
+                      <div className="h-6 print:h-12"></div>
+                    </div>
+                  </div>
+                ) : (
                 /* A4 GST Invoice Preview */
                 <div
                   id="printable-a4"
-                  className="w-full max-w-xl bg-white p-6 shadow-md border border-slate-300 text-black text-xs leading-normal select-text"
+                  className="w-full max-w-4xl bg-white p-6 sm:p-8 shadow-md border border-slate-300 text-black text-xs leading-normal select-text"
                 >
-                  <div className="border border-black p-4 space-y-3">
+                  <div className="border border-black p-5 space-y-4">
                     {/* Header */}
-                    <div className="text-center pb-2 border-b border-black">
-                      <div className="font-bold text-base tracking-wide">TAX INVOICE</div>
-                      <div className="text-[10px] text-slate-600 uppercase font-semibold">
-                        ORIGINAL FOR RECIPIENT
+                    <div className="text-center pb-3 border-b border-black">
+                      <div className="font-black text-lg tracking-wider uppercase text-black">
+                        {hasGst ? 'TAX INVOICE' : 'ESTIMATE / CASH BILL'}
                       </div>
-                      <div className="font-bold text-sm text-[#1f4e79] mt-1">SRI MEENAKSHI SUPERMARKET</div>
-                      <div className="text-[11px]">124, GST Road, Chromepet, Chennai - 600044, Tamil Nadu</div>
-                      <div className="text-[11px] font-mono">
-                        GSTIN: 33AAAAA0000A1Z5 | State Code: 33 (Tamil Nadu)
+                      <div className="text-[10px] text-slate-600 uppercase font-bold tracking-wide">
+                        {hasGst ? 'ORIGINAL FOR RECIPIENT' : 'CUSTOMER COPY'}
+                      </div>
+                      {/* Store English Name only, no logo, no Tamil subtitle */}
+                      <div className="mt-2">
+                        <div className="font-black text-xl uppercase tracking-wider text-black">
+                          {storeSettings.storeName || 'SRI VENKATESWARA TRADERS'}
+                        </div>
+                      </div>
+                      {/* Address: Madam Street on line 1, Kanchipuram - 631 502 on separate line 2 */}
+                      <div className="text-xs text-black font-semibold mt-1">
+                        மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில்
+                      </div>
+                      <div className="text-xs text-black font-bold">
+                        காஞ்சிபுரம் - 631 502.
+                      </div>
+                      {/* Phone Numbers strictly as requested: Ph: 8143 84 8143 / 9941333457 */}
+                      <div className="text-xs font-bold text-black font-mono mt-1">
+                        Ph: 8143 84 8143 / 9941333457
+                      </div>
+                      {/* GST Number */}
+                      <div className="text-xs font-extrabold text-black font-mono mt-0.5">
+                        GSTIN: {storeSettings.gstNumber || '33AAAAA0000A1Z5'}
                       </div>
                     </div>
 
                     {/* Invoice & Buyer Info Grid */}
-                    <div className="grid grid-cols-2 gap-4 text-[11px] pb-2 border-b border-black">
-                      <div>
-                        <div className="font-bold text-slate-800">Invoice Details:</div>
+                    <div className="grid grid-cols-2 gap-4 text-xs pb-3 border-b border-black">
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-900 uppercase">Invoice Details:</div>
                         <div>
-                          Invoice No: <strong>{printModalInvoice.invoiceNumber}</strong>
+                          Invoice No: <strong className="font-mono">{printModalInvoice.invoiceNumber}</strong>
                         </div>
                         <div>
                           Date: {new Date(printModalInvoice.invoiceDate).toLocaleDateString('en-IN')}{' '}
@@ -2441,49 +2625,49 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         </div>
                         <div>Place of Supply: {printModalInvoice.isInterstate ? 'Inter-state' : 'Tamil Nadu (33)'}</div>
                       </div>
-                      <div>
-                        <div className="font-bold text-slate-800">Billed To (Buyer):</div>
-                        <div className="font-semibold">{printModalInvoice.customerName}</div>
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-900 uppercase">Billed To (Buyer):</div>
+                        <div className="font-bold text-black">{printModalInvoice.customerName}</div>
                         <div>Mobile: {printModalInvoice.customerMobile || '—'}</div>
                         <div>GSTIN: {printModalInvoice.customerGstin || 'Unregistered Consumer'}</div>
                       </div>
                     </div>
 
                     {/* Items Table */}
-                    <table className="w-full text-left text-[10px] border border-black border-collapse">
-                      <thead className="bg-slate-100 border-b border-black">
+                    <table className="w-full text-left text-xs border border-black border-collapse">
+                      <thead className="bg-slate-100 border-b border-black font-bold">
                         <tr>
-                          <th className="p-1 border-r border-black w-6 text-center">#</th>
-                          <th className="p-1 border-r border-black">Item Description</th>
-                          <th className="p-1 border-r border-black w-14 text-center">HSN/SKU</th>
-                          <th className="p-1 border-r border-black w-12 text-center">Qty</th>
-                          <th className="p-1 border-r border-black w-14 text-right">MRP ₹</th>
-                          <th className="p-1 border-r border-black w-14 text-right">Rate ₹</th>
-                          <th className="p-1 border-r border-black w-14 text-right">Taxable ₹</th>
-                          <th className="p-1 border-r border-black w-12 text-center">GST %</th>
-                          <th className="p-1 text-right w-16">Total ₹</th>
+                          <th className="p-1.5 border-r border-black w-8 text-center">#</th>
+                          <th className="p-1.5 border-r border-black">Item Description</th>
+                          <th className="p-1.5 border-r border-black w-24 text-center">HSN/SKU</th>
+                          <th className="p-1.5 border-r border-black w-16 text-center">Qty</th>
+                          <th className="p-1.5 border-r border-black w-20 text-right">MRP ₹</th>
+                          <th className="p-1.5 border-r border-black w-20 text-right">Rate ₹</th>
+                          <th className="p-1.5 border-r border-black w-22 text-right">Taxable ₹</th>
+                          <th className="p-1.5 border-r border-black w-16 text-center">GST %</th>
+                          <th className="p-1.5 text-right w-24">Total ₹</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black">
                         {printModalInvoice.items.map((it, idx) => (
-                          <tr key={idx}>
-                            <td className="p-1 border-r border-black text-center">{idx + 1}</td>
-                            <td className="p-1 border-r border-black font-semibold">{it.productName}</td>
-                            <td className="p-1 border-r border-black text-center font-mono">{it.productCode}</td>
-                            <td className="p-1 border-r border-black text-center font-mono">
+                          <tr key={idx} className="align-middle">
+                            <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
+                            <td className="p-1.5 border-r border-black font-bold text-black">{it.productName}</td>
+                            <td className="p-1.5 border-r border-black text-center font-mono">{it.productCode}</td>
+                            <td className="p-1.5 border-r border-black text-center font-mono font-semibold">
                               {it.quantity} {it.unit}
                             </td>
-                            <td className="p-1 border-r border-black text-right font-mono">
+                            <td className="p-1.5 border-r border-black text-right font-mono">
                               ₹{(it.mrp !== undefined ? it.mrp : it.rate).toFixed(2)}
                             </td>
-                            <td className="p-1 border-r border-black text-right font-mono">
+                            <td className="p-1.5 border-r border-black text-right font-mono">
                               ₹{it.rate.toFixed(2)}
                             </td>
-                            <td className="p-1 border-r border-black text-right font-mono">
+                            <td className="p-1.5 border-r border-black text-right font-mono">
                               ₹{it.taxableAmount.toFixed(2)}
                             </td>
-                            <td className="p-1 border-r border-black text-center font-mono">{it.taxRate}%</td>
-                            <td className="p-1 text-right font-mono font-bold">₹{it.lineTotal.toFixed(2)}</td>
+                            <td className="p-1.5 border-r border-black text-center font-mono">{it.taxRate}%</td>
+                            <td className="p-1.5 text-right font-mono font-bold text-black">₹{it.lineTotal.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2540,7 +2724,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     <div className="pt-6 flex justify-between items-end border-t border-black text-[10px]">
                       <div>Customer Signature</div>
                       <div className="text-right">
-                        <div className="font-semibold">For SRI MEENAKSHI SUPERMARKET</div>
+                        <div className="font-semibold">For {storeSettings.storeName || 'SRI VENKATESWARA (SVT)'}</div>
                         <div className="h-8"></div>
                         <div className="border-t border-dotted border-black inline-block px-4">
                           Authorized Signatory
@@ -2553,17 +2737,17 @@ export const PosBilling: React.FC<PosBillingProps> = ({
             </div>
 
             {/* Modal Actions */}
-            <div className="p-3 bg-slate-100 border-t border-slate-300 flex justify-between items-center shrink-0">
-              <span className="text-xs text-slate-500">
-                Ready for Windows 7 Spooler & Thermal POS Printer (COM/USB)
+            <div className="print-modal-footer p-3 bg-slate-100 border-t border-slate-300 flex justify-between items-center shrink-0">
+              <span className="text-xs text-slate-600 font-medium">
+                4-Inch Thermal POS Printer (104mm) Default · Full Paper Width
               </span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setPrintModalInvoice(null)}
-                  className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
-                  Close
+                  Close (Esc)
                 </button>
                 <button
                   type="button"
@@ -2571,16 +2755,18 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     playScannerBeep('print');
                     window.print();
                   }}
-                  className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print {printFormat === 'thermal' ? 'Thermal Receipt' : 'A4 Invoice'} (Enter)</span>
+                  <span>
+                    Print {printFormat === 'a4' ? 'A4 Invoice' : '4" Thermal Receipt'} (F9 / Enter)
+                  </span>
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ); })()}
 
       {/* ========================================================= */}
       {/* MODAL: CAMERA BARCODE SCANNER                             */}
@@ -2999,14 +3185,14 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setPrintFormat('thermal');
+                    setPrintFormat('thermal-4inch');
                     setPrintModalInvoice(viewDetailsInvoice);
                     setViewDetailsInvoice(null);
                   }}
-                  className="px-3 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] text-white rounded text-xs font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print Thermal</span>
+                  <span>Print 4" Thermal</span>
                 </button>
                 <button
                   type="button"

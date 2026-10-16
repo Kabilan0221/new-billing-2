@@ -6,6 +6,7 @@ import { ProductMaster } from './components/ProductMaster';
 import { CategoryBrandDialog } from './components/CategoryBrandDialog';
 import { ExcelDialog } from './components/ExcelDialog';
 import { BarcodeDialog } from './components/BarcodeDialog';
+import { SVTLogo } from './components/SVTLogo';
 import { SolutionExplorer } from './components/SolutionExplorer';
 import { PosBilling } from './components/PosBilling';
 import { ModulePlaceholderView } from './components/ModulePlaceholderView';
@@ -81,6 +82,10 @@ export default function App() {
         e.preventDefault();
         setActiveNav('stock');
       } else if (e.key === 'F9') {
+        if (activeNav === 'pos') {
+          // Allow PosBilling component to handle F9 direct 4-inch thermal checkout & print
+          return;
+        }
         e.preventDefault();
         setActiveNav('invoices');
       } else if (e.key === 'F10') {
@@ -153,39 +158,24 @@ export default function App() {
     <div className="w-screen h-screen bg-white flex flex-col overflow-hidden font-sans">
       {/* Header Store Banner */}
       <div className="bg-[#182b49] text-white px-4 py-2 flex flex-wrap items-center justify-between border-b border-[#122035] text-xs shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="font-bold tracking-wider text-amber-300">SRI MURUGAN SUPER MARKET</span>
-          <span className="hidden sm:inline text-slate-400">|</span>
-          <span className="text-slate-300 hidden sm:inline">124 Bazaar Road, Chennai - 600017</span>
-          <span className="hidden sm:inline text-slate-400">|</span>
-          <span className="text-slate-300 font-mono text-[11px]">GSTIN: 33AAAAA0000A1Z5</span>
+        <div className="flex items-center gap-2.5">
+          <SVTLogo size={28} className="drop-shadow-xs" />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-bold tracking-wider text-amber-300 text-xs">ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)</span>
+              <span className="hidden lg:inline text-[10px] text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-600/40">
+                சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-slate-300">
+              <span>மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502</span>
+              <span className="hidden md:inline text-slate-400">|</span>
+              <span className="hidden md:inline font-mono text-[10px] text-slate-300">📱 8143 84 8143 / 9941333457 / 044 2723 1947</span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-slate-300">
-          <div className="flex items-center bg-[#0f1c30] p-0.5 rounded border border-slate-700/60">
-            <button
-              type="button"
-              onClick={() => setActiveView('desktop')}
-              className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
-                activeView === 'desktop'
-                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              POS Retail App
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveView('solution')}
-              className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
-                activeView === 'solution'
-                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-              }`}
-            >
-              C# Solution (.NET 4.8)
-            </button>
-          </div>
           <span className="font-mono text-slate-300 text-[11px] hidden md:inline mr-1">{currentTime}</span>
           <div className="h-4 w-[1px] bg-slate-600/80 mx-1" />
           <div className="flex items-center -mr-2">

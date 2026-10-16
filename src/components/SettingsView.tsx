@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { db } from '../services/dbEngine';
 import { AppSettings } from '../types';
+import { SVTLogo } from './SVTLogo';
 
 export const SettingsView: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -87,40 +88,89 @@ export const SettingsView: React.FC = () => {
         <form onSubmit={handleSave} className="space-y-6">
           {/* Card 1: Business Profile */}
           <div className="bg-white p-5 rounded border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-slate-100 font-bold text-sm text-slate-800">
-              <Building className="w-4 h-4 text-blue-600" />
-              <span>Business Profile & GST Registration</span>
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2 font-bold text-sm text-slate-800">
+                <Building className="w-4 h-4 text-blue-600" />
+                <span>Business Profile & Store Identity</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <SVTLogo size={24} />
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Official SVT Logo Active
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-700 mb-1">Store / Business Name *</label>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Store Name (English) *</label>
                 <input
                   type="text"
                   required
                   value={settings.storeName}
                   onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-700 mb-1">Store Physical Address</label>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Store Name (Tamil - பெயர்)</label>
                 <input
                   type="text"
-                  value={settings.storeAddress}
-                  onChange={(e) => setSettings({ ...settings, storeAddress: e.target.value })}
+                  value={settings.storeTamilName || 'ஸ்ரீ வெங்கடேஸ்வரா'}
+                  onChange={(e) => setSettings({ ...settings, storeTamilName: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Business Categories / Subtitle</label>
+                <input
+                  type="text"
+                  value={settings.storeSubtitle || 'சாமிமில் | டிம்பர்ஸ் | பர்னிச்சர்ஸ் | ஸ்டீல்டோர்ஸ்'}
+                  onChange={(e) => setSettings({ ...settings, storeSubtitle: e.target.value })}
+                  placeholder="சாமிமில் | டிம்பர்ஸ் | பர்னிச்சர்ஸ் | ஸ்டீல்டோர்ஸ்"
                   className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Contact Phone Number</label>
+                <label className="block font-semibold text-slate-700 mb-1">Proprietor / Owner (உரிமை)</label>
+                <input
+                  type="text"
+                  value={settings.storeOwner || 'பெரியநத்தம் வெ.பெருமாள் நாயகர்'}
+                  onChange={(e) => setSettings({ ...settings, storeOwner: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-700 mb-1">Store Physical Address *</label>
+                <input
+                  type="text"
+                  value={settings.storeAddress}
+                  onChange={(e) => setSettings({ ...settings, storeAddress: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs font-medium focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">WhatsApp Order Number</label>
+                <input
+                  type="text"
+                  value={settings.storeWhatsApp || '8143 84 8143'}
+                  onChange={(e) => setSettings({ ...settings, storeWhatsApp: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs font-mono focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Contact Phone Numbers</label>
                 <input
                   type="text"
                   value={settings.storePhone}
                   onChange={(e) => setSettings({ ...settings, storePhone: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs font-mono focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -143,7 +193,6 @@ export const SettingsView: React.FC = () => {
                   onChange={(e) => setSettings({ ...settings, gstNumber: e.target.value.toUpperCase() })}
                   className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs font-mono uppercase focus:ring-1 focus:ring-blue-500"
                 />
-                <span className="text-[10px] text-slate-400">e.g. 33AAAAA0000A1Z5</span>
               </div>
 
               <div>

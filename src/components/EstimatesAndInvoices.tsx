@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { db } from '../services/dbEngine';
 import { EstimateHeader, EstimateItem, Customer, Product, InvoiceHeader } from '../types';
+import { SVTLogo } from './SVTLogo';
 
 interface EstimatesAndInvoicesProps {
   onRefreshData?: () => void;
@@ -607,10 +608,24 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
                 </div>
 
                 {/* Store Header */}
-                <div className="text-center space-y-0.5 border-b border-slate-300 pb-3">
-                  <h2 className="text-base font-black tracking-wide">SRI MEENAKSHI SUPER STORE</h2>
-                  <p className="text-[11px] text-slate-600">124, West Masi Street, Madurai - 625001 | Phone: 0452-2345678</p>
-                  <p className="text-[11px] text-slate-600">GSTIN: 33AABCS1429B1Z1 | State: Tamil Nadu (Code 33)</p>
+                <div className="text-center space-y-1 border-b border-slate-300 pb-3">
+                  <div className="flex items-center justify-center gap-2.5">
+                    <SVTLogo size={32} />
+                    <div className="text-left">
+                      <h2 className="text-base font-black tracking-wide text-slate-900 leading-tight">
+                        ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)
+                      </h2>
+                      <p className="text-[10px] text-slate-600 font-semibold">
+                        சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-600">
+                    📱 WhatsApp: 8143 84 8143 | Ph: 9941333457 / 044 2723 1947 | GSTIN: 33AAAAA0000A1Z5
+                  </p>
                 </div>
 
                 {/* Estimate Meta & Customer Info */}
@@ -720,7 +735,7 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
                   <div>
                     <div className="w-40 border-b border-slate-400 mb-1" />
                     <span className="font-bold text-slate-800 text-[11px]">Authorized Signatory</span>
-                    <p className="text-[10px] text-slate-500">For Sri Meenakshi Super Store</p>
+                    <p className="text-[10px] text-slate-500">For Sri Venkateswara (SVT) Kanchipuram</p>
                   </div>
                 </div>
               </div>

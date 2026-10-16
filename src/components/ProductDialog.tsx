@@ -129,12 +129,14 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
     e.preventDefault();
     setValidationErrors([]);
 
-    const barcodeCheck = db.isBarcodeUnique(barcode, product?.id);
-    if (!barcodeCheck.isUnique) {
-      setValidationErrors([
-        `Barcode '${barcode}' is already assigned to '${barcodeCheck.conflictProduct?.nameEn}'. Barcode number double vara kudathu!`,
-      ]);
-      return;
+    if (barcode && barcode.trim()) {
+      const barcodeCheck = db.isBarcodeUnique(barcode.trim(), product?.id);
+      if (!barcodeCheck.isUnique) {
+        setValidationErrors([
+          `Barcode '${barcode}' is already assigned to '${barcodeCheck.conflictProduct?.nameEn}'. Each product must have a unique barcode.`,
+        ]);
+        return;
+      }
     }
 
     const payload: Partial<Product> = {
@@ -235,21 +237,32 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
 
               <div className="md:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-600 font-medium">Barcode (பார்கோடு) *</label>
-                  <button
-                    type="button"
-                    onClick={generateA385Barcode}
-                    className="text-xs text-[#106ebe] hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <span>⚡ Auto Generate (A385...)</span>
-                  </button>
+                  <label className="text-slate-600 font-medium">Barcode (பார்கோடு)</label>
+                  <div className="flex items-center gap-2">
+                    {barcode && (
+                      <button
+                        type="button"
+                        onClick={() => setBarcode('')}
+                        className="text-xs text-red-600 hover:text-red-800 hover:underline font-semibold cursor-pointer flex items-center gap-0.5"
+                        title="Remove Barcode"
+                      >
+                        ✕ Remove
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={generateA385Barcode}
+                      className="text-xs text-[#106ebe] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>⚡ Auto Generate (A385, A386...)</span>
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="text"
-                  required
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value.toUpperCase())}
-                  placeholder="e.g. A3850001"
+                  placeholder="e.g. A385, A386, A387... (or leave empty)"
                   className={`w-full px-2.5 py-1.5 bg-white border ${
                     barcode && !db.isBarcodeUnique(barcode, product?.id).isUnique
                       ? 'border-red-500 bg-red-50 text-red-900 ring-1 ring-red-500 font-bold'
@@ -258,7 +271,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
                 />
                 {barcode && !db.isBarcodeUnique(barcode, product?.id).isUnique && (
                   <p className="text-[11px] text-red-600 font-bold mt-1">
-                    ⚠️ இந்த பார்கோடு ஏற்கனவே '{db.isBarcodeUnique(barcode, product?.id).conflictProduct?.nameEn}' பொருளுக்கு உள்ளது! Barcode number double vara kudathu.
+                    ⚠️ இந்த பார்கோடு ஏற்கனவே '{db.isBarcodeUnique(barcode, product?.id).conflictProduct?.nameEn}' பொருளுக்கு உள்ளது! (Duplicate barcode - must be unique)
                   </p>
                 )}
               </div>

@@ -164,14 +164,12 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
       setRowError('Product Name (English) cannot be empty.');
       return;
     }
-    if (!editFormData.barcode?.trim()) {
-      setRowError('Barcode cannot be empty.');
-      return;
-    }
-    const barcodeCheckEdit = db.isBarcodeUnique(editFormData.barcode, editingRowId);
-    if (!barcodeCheckEdit.isUnique) {
-      setRowError(`Barcode '${editFormData.barcode}' is already assigned to '${barcodeCheckEdit.conflictProduct?.nameEn}'. Barcode number double vara kudathu!`);
-      return;
+    if (editFormData.barcode?.trim()) {
+      const barcodeCheckEdit = db.isBarcodeUnique(editFormData.barcode.trim(), editingRowId);
+      if (!barcodeCheckEdit.isUnique) {
+        setRowError(`Barcode '${editFormData.barcode}' is already assigned to '${barcodeCheckEdit.conflictProduct?.nameEn}'. Duplicate barcodes are not allowed.`);
+        return;
+      }
     }
     if ((editFormData.saleRate ?? 0) < 0) {
       setRowError('Sale Rate cannot be negative.');
@@ -247,14 +245,12 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
       setRowError('Product Name (English) is required.');
       return;
     }
-    if (!newFormData.barcode?.trim()) {
-      setRowError('Barcode is required.');
-      return;
-    }
-    const barcodeCheckAdd = db.isBarcodeUnique(newFormData.barcode);
-    if (!barcodeCheckAdd.isUnique) {
-      setRowError(`Barcode '${newFormData.barcode}' is already assigned to '${barcodeCheckAdd.conflictProduct?.nameEn}'. Barcode number double vara kudathu!`);
-      return;
+    if (newFormData.barcode?.trim()) {
+      const barcodeCheckAdd = db.isBarcodeUnique(newFormData.barcode.trim());
+      if (!barcodeCheckAdd.isUnique) {
+        setRowError(`Barcode '${newFormData.barcode}' is already assigned to '${barcodeCheckAdd.conflictProduct?.nameEn}'. Duplicate barcodes are not allowed.`);
+        return;
+      }
     }
     if ((newFormData.saleRate ?? 0) < 0) {
       setRowError('Sale Rate cannot be negative.');
@@ -542,7 +538,7 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
                         if (e.key === 'Enter') saveInlineAdd();
                         if (e.key === 'Escape') cancelInlineAdd();
                       }}
-                      placeholder="A385... *"
+                      placeholder="A385, A386..."
                       className={`w-full pl-1.5 pr-6 py-1 text-[11px] font-mono bg-white border ${
                         newFormData.barcode && !db.isBarcodeUnique(newFormData.barcode).isUnique
                           ? 'border-red-500 bg-red-50 text-red-900 ring-1 ring-red-500 font-bold'
@@ -550,18 +546,30 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
                       } rounded focus:border-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs`}
                       title={
                         newFormData.barcode && !db.isBarcodeUnique(newFormData.barcode).isUnique
-                          ? `Duplicate barcode! Already used by '${db.isBarcodeUnique(newFormData.barcode).conflictProduct?.nameEn}' (Double vara kudathu)`
-                          : 'Auto barcode starts with A385'
+                          ? `Duplicate barcode! Already used by '${db.isBarcodeUnique(newFormData.barcode).conflictProduct?.nameEn}' (Must be unique)`
+                          : 'Auto sequential barcode: A385, A386, A387...'
                       }
                     />
-                    <button
-                      type="button"
-                      onClick={() => setNewFormData((prev) => ({ ...prev, barcode: db.generateUniqueBarcode('A385') }))}
-                      title="Generate next unique A385 barcode (Double vara kudathu)"
-                      className="absolute right-1 text-slate-400 hover:text-emerald-700 hover:scale-110 p-0.5"
-                    >
-                      ⚡
-                    </button>
+                    <div className="absolute right-1 flex items-center gap-0.5">
+                      {newFormData.barcode && (
+                        <button
+                          type="button"
+                          onClick={() => setNewFormData((prev) => ({ ...prev, barcode: '' }))}
+                          title="Remove barcode"
+                          className="text-slate-400 hover:text-red-600 p-0.5 cursor-pointer text-[10px]"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setNewFormData((prev) => ({ ...prev, barcode: db.generateUniqueBarcode('A385') }))}
+                        title="Generate next sequential unique barcode A385, A386..."
+                        className="text-slate-400 hover:text-emerald-700 hover:scale-110 p-0.5 cursor-pointer text-xs"
+                      >
+                        ⚡
+                      </button>
+                    </div>
                   </div>
                   {newFormData.barcode && !db.isBarcodeUnique(newFormData.barcode).isUnique && (
                     <div className="text-[9px] text-red-600 font-bold leading-tight mt-0.5 truncate">
@@ -815,7 +823,7 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
                               if (e.key === 'Enter') saveInlineEdit();
                               if (e.key === 'Escape') cancelInlineEdit();
                             }}
-                            placeholder="A385..."
+                            placeholder="A385, A386..."
                             className={`w-full pl-1.5 pr-6 py-1 text-[11px] font-mono bg-white border ${
                               editFormData.barcode && !db.isBarcodeUnique(editFormData.barcode, editingRowId).isUnique
                                 ? 'border-red-500 bg-red-50 text-red-900 ring-1 ring-red-500 font-bold'
@@ -824,18 +832,30 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
                             autoFocus
                             title={
                               editFormData.barcode && !db.isBarcodeUnique(editFormData.barcode, editingRowId).isUnique
-                                ? `Duplicate barcode! Already used by '${db.isBarcodeUnique(editFormData.barcode, editingRowId).conflictProduct?.nameEn}' (Double vara kudathu)`
-                                : 'A385 barcode'
+                                ? `Duplicate barcode! Already used by '${db.isBarcodeUnique(editFormData.barcode, editingRowId).conflictProduct?.nameEn}' (Must be unique)`
+                                : 'Auto sequential barcode: A385, A386, A387...'
                             }
                           />
-                          <button
-                            type="button"
-                            onClick={() => setEditFormData((prev) => ({ ...prev, barcode: db.generateUniqueBarcode('A385') }))}
-                            title="Generate unique A385 barcode (Double vara kudathu)"
-                            className="absolute right-1 text-slate-400 hover:text-blue-700 hover:scale-110 p-0.5"
-                          >
-                            ⚡
-                          </button>
+                          <div className="absolute right-1 flex items-center gap-0.5">
+                            {editFormData.barcode && (
+                              <button
+                                type="button"
+                                onClick={() => setEditFormData((prev) => ({ ...prev, barcode: '' }))}
+                                title="Remove barcode"
+                                className="text-slate-400 hover:text-red-600 p-0.5 cursor-pointer text-[10px]"
+                              >
+                                ✕
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setEditFormData((prev) => ({ ...prev, barcode: db.generateUniqueBarcode('A385') }))}
+                              title="Generate next sequential unique barcode A385, A386..."
+                              className="text-slate-400 hover:text-blue-700 hover:scale-110 p-0.5 cursor-pointer text-xs"
+                            >
+                              ⚡
+                            </button>
+                          </div>
                         </div>
                         {editFormData.barcode && !db.isBarcodeUnique(editFormData.barcode, editingRowId).isUnique && (
                           <div className="text-[9px] text-red-600 font-bold leading-tight mt-0.5 truncate">

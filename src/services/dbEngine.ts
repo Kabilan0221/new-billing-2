@@ -188,7 +188,17 @@ class SQLiteIndexedEngine {
       this.supplierLedger = Array.isArray(d.supplierLedger) ? d.supplierLedger : [];
       this.auditLogs = Array.isArray(d.auditLogs) ? d.auditLogs : [];
       if (d.appSettings) {
-        this.appSettings = d.appSettings;
+        this.appSettings = { ...this.appSettings, ...d.appSettings };
+        this.appSettings.storeName = 'Sri Venkateswara (SVT)';
+        this.appSettings.storeTamilName = 'ஸ்ரீ வெங்கடேஸ்வரா';
+        this.appSettings.storeSubtitle = '';
+        this.appSettings.storeOwner = 'பெரியநத்தம் வெ.பெருமாள் நாயகர்';
+        this.appSettings.storeBlessing = 'என் தாய் தந்தை துணை';
+        this.appSettings.storeAddress = 'மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502.';
+        this.appSettings.storePhone = '8143 84 8143 / 9941333457';
+        this.appSettings.storeWhatsApp = '8143 84 8143';
+        this.appSettings.storeLandline = '';
+        this.appSettings.receiptPaperSize = '104mm (4-Inch) Thermal';
       }
 
       // Recalculate auto-increment IDs safely based on loaded records
@@ -853,7 +863,7 @@ class SQLiteIndexedEngine {
         this.barcodeIndex.get(cleanBarcode) ||
         this.products.find((p) => p.id !== product.id && p.barcode?.trim().toLowerCase() === cleanBarcode);
       if (existing && existing.id !== product.id) {
-        errors.push(`Barcode '${product.barcode}' is already assigned to '${existing.nameEn}'. Barcode number double vara kudathu (Duplicate barcode not allowed).`);
+        errors.push(`Barcode '${product.barcode}' is already assigned to '${existing.nameEn}'. Duplicate barcodes are not allowed.`);
       }
     }
 
@@ -3535,27 +3545,15 @@ class SQLiteIndexedEngine {
     return Array.from(slabs.values()).sort((a, b) => a.taxRate - b.taxRate);
   }
 
-  // Barcode Studio Services
+  // Barcode Studio Services — Sequential A385, A386, A387... (Strictly No Repeated Values)
   public generateUniqueBarcode(prefixOrFormat: string = 'A385', format: 'Code128' | 'EAN13' = 'Code128'): string {
-    let prefix = 'A385';
-    let fmt = format;
-    if (prefixOrFormat === 'EAN13') {
-      fmt = 'EAN13';
-      prefix = '890';
-    } else if (prefixOrFormat === 'Code128') {
-      fmt = 'Code128';
-      prefix = 'A385';
-    } else if (prefixOrFormat) {
-      prefix = prefixOrFormat.trim().toUpperCase();
-    }
-
-    if (fmt === 'EAN13') {
+    if (prefixOrFormat === 'EAN13' || format === 'EAN13') {
       let eanCandidate = '';
       let attempts = 0;
       do {
         attempts++;
         const rnd = Math.floor(100000000 + Math.random() * 900000000).toString();
-        const first12 = ((prefix.match(/^\d+$/) ? prefix : '890') + rnd).slice(0, 12);
+        const first12 = ('890' + rnd).slice(0, 12);
         let sum = 0;
         for (let i = 0; i < 12; i++) {
           const d = parseInt(first12[i], 10);
@@ -3572,10 +3570,30 @@ class SQLiteIndexedEngine {
       return eanCandidate;
     }
 
-    // Default: Auto generate sequential barcode starting with A385 (or prefix)
-    // Find the current highest numeric sequence with this prefix
-    const regex = new RegExp(`^${prefix}(\\d+)$`, 'i');
-    let maxNum = 0;
+    // Default: Sequential barcode starting at A385, A386, A387, A388...
+    // Pattern: A followed directly by sequence number (e.g. A385, A386, A387...)
+    // No repeated / duplicate values allowed: strictly unique sequential barcodes
+    let prefixLetter = 'A';
+    let minStartNumber = 385;
+
+    // Parse prefix if custom prefix provided (e.g., 'A385' -> prefix 'A', start 385)
+    if (prefixOrFormat && prefixOrFormat !== 'Code128' && prefixOrFormat !== 'EAN13') {
+      const match = prefixOrFormat.trim().match(/^([A-Za-z]+)(\d*)$/);
+      if (match) {
+        prefixLetter = match[1].toUpperCase();
+        if (match[2]) {
+          const parsedStart = parseInt(match[2], 10);
+          if (!isNaN(parsedStart) && parsedStart > 0) {
+            minStartNumber = parsedStart;
+          }
+        }
+      }
+    }
+
+    // Find the highest existing sequential number matching this prefix letter across all products
+    const regex = new RegExp(`^${prefixLetter}(\\d+)$`, 'i');
+    let maxNum = minStartNumber - 1; // e.g. 384, so first is 385 if none exist
+
     for (const p of this.products) {
       if (!p.barcode) continue;
       const match = p.barcode.trim().match(regex);
@@ -3587,17 +3605,17 @@ class SQLiteIndexedEngine {
       }
     }
 
-    // Next sequential number starting with A385
-    let counter = Math.max(1, maxNum + 1);
-    let candidate = `${prefix}${String(counter).padStart(4, '0')}`;
+    // Next sequential number: A385, A386, A387, A388...
+    let counter = Math.max(minStartNumber, maxNum + 1);
+    let candidate = `${prefixLetter}${counter}`;
 
-    // Guarantee uniqueness: Barcode number double vara kudathu!
+    // Guarantee 100% uniqueness: strictly unique sequential barcodes
     while (
       this.barcodeIndex.has(candidate.toLowerCase()) ||
       this.products.some((p) => p.barcode?.trim().toLowerCase() === candidate.toLowerCase())
     ) {
       counter++;
-      candidate = `${prefix}${String(counter).padStart(4, '0')}`;
+      candidate = `${prefixLetter}${counter}`;
     }
 
     return candidate;
@@ -3608,7 +3626,7 @@ class SQLiteIndexedEngine {
     const clean = barcode.trim().toLowerCase();
     const existing =
       this.barcodeIndex.get(clean) ||
-      this.products.find((p) => p.barcode?.trim().toLowerCase() === clean);
+      this.products.find((p) => p.id !== excludeProductId && p.barcode?.trim().toLowerCase() === clean);
 
     if (existing && existing.id !== excludeProductId) {
       return { isUnique: false, conflictProduct: existing };
@@ -3624,17 +3642,17 @@ class SQLiteIndexedEngine {
     const p = this.idIndex.get(productId);
     if (!p) return { success: false, errors: [`Product ID ${productId} not found.`] };
 
-    const clean = newBarcode?.trim();
+    const clean = newBarcode?.trim().toUpperCase();
     if (!clean) return { success: false, errors: ['Barcode cannot be empty.'] };
 
-    // Check duplicate ("double vara kudathu")
+    // Check duplicate (Strictly unique - no duplicate barcodes)
     const existing =
       this.barcodeIndex.get(clean.toLowerCase()) ||
       this.products.find((pr) => pr.id !== productId && pr.barcode?.trim().toLowerCase() === clean.toLowerCase());
     if (existing && existing.id !== productId) {
       return {
         success: false,
-        errors: [`Barcode '${clean}' is already assigned to '${existing.nameEn}'. Barcode number double vara kudathu (Duplicate barcode not allowed).`],
+        errors: [`Barcode '${clean}' is already assigned to '${existing.nameEn}'. Duplicate barcodes are not allowed.`],
       };
     }
 
@@ -3644,10 +3662,31 @@ class SQLiteIndexedEngine {
 
     const oldBarcode = p.barcode;
     p.barcode = clean;
+    if (oldBarcode) {
+      this.barcodeIndex.delete(oldBarcode.toLowerCase());
+    }
+    this.barcodeIndex.set(clean.toLowerCase(), p);
     p.updatedAt = new Date().toISOString();
     this.rebuildIndexes();
 
     this.logAudit('Product', p.productCode, 'BARCODE_UPDATE', `Updated barcode for '${p.nameEn}' from '${oldBarcode}' to '${clean}'.`);
+    this.saveToLocalStorage();
+    return { success: true, errors: [], product: p };
+  }
+
+  public removeBarcodeFromProduct(productId: number): { success: boolean; errors: string[]; product?: Product } {
+    const p = this.idIndex.get(productId);
+    if (!p) return { success: false, errors: [`Product ID ${productId} not found.`] };
+
+    const oldBarcode = p.barcode;
+    if (p.barcode) {
+      this.barcodeIndex.delete(p.barcode.toLowerCase());
+      p.barcode = '';
+      p.updatedAt = new Date().toISOString();
+      this.rebuildIndexes();
+      this.logAudit('Product', p.productCode, 'BARCODE_REMOVE', `Removed barcode '${oldBarcode}' from '${p.nameEn}'.`);
+      this.saveToLocalStorage();
+    }
     return { success: true, errors: [], product: p };
   }
 
@@ -3681,13 +3720,19 @@ class SQLiteIndexedEngine {
   // PHASE 7: DASHBOARD & REPORTING SERVICES
   // -------------------------------------------------------------
   private appSettings: AppSettings = {
-    storeName: 'Sri Murugan Super Market',
-    storeAddress: '124 Bazaar Road, T. Nagar, Chennai - 600017',
-    storePhone: '044-24345678',
-    storeEmail: 'contact@murugansupermarket.com',
+    storeName: 'Sri Venkateswara (SVT)',
+    storeTamilName: 'ஸ்ரீ வெங்கடேஸ்வரா',
+    storeSubtitle: '',
+    storeOwner: 'பெரியநத்தம் வெ.பெருமாள் நாயகர்',
+    storeBlessing: 'என் தாய் தந்தை துணை',
+    storeAddress: 'மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502.',
+    storePhone: '8143 84 8143 / 9941333457',
+    storeWhatsApp: '8143 84 8143',
+    storeLandline: '',
+    storeEmail: 'contact@srivenkateswara-svt.com',
     gstNumber: '33AAAAA0000A1Z5',
     currencySymbol: '₹',
-    receiptPaperSize: '80mm Thermal',
+    receiptPaperSize: '104mm (4-Inch) Thermal',
     defaultTaxRate: 5,
     barcodeFormat: 'Code128',
     defaultLowStockThreshold: 5,

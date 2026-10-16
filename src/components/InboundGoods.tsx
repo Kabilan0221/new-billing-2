@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { db, PurchaseFilter } from '../services/dbEngine';
 import { Product, Supplier, PurchaseHeader, PurchaseItem } from '../types';
+import { SVTLogo } from './SVTLogo';
 
 interface InboundGoodsProps {
   initialSupplierId?: number;
@@ -1244,11 +1245,25 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
             }`}
           >
             {/* Header */}
-            <div className="text-center border-b border-slate-300 pb-3 space-y-0.5">
-              <h2 className="text-base font-bold text-slate-900">SRI MURUGAN SUPER MARKET</h2>
-              <p className="text-[11px] text-slate-600">124 Bazaar Road, T. Nagar, Chennai - 600017</p>
-              <p className="text-[10px] text-slate-500 font-mono">GSTIN: 33AAAAA0000A1Z5 · Ph: 044-24345678</p>
-              <div className="pt-1.5 font-bold uppercase tracking-wider text-xs text-blue-900">
+            <div className="text-center border-b border-slate-300 pb-3 space-y-1">
+              <div className="flex items-center justify-center gap-2">
+                <SVTLogo size={28} />
+                <div className="text-left">
+                  <h2 className="text-base font-bold text-slate-900 leading-tight">
+                    ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)
+                  </h2>
+                  <p className="text-[10px] text-slate-600 font-semibold">
+                    சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-600">
+                மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502
+              </p>
+              <p className="text-[10px] text-slate-500 font-mono">
+                📱 8143 84 8143 / 9941333457 / 044 2723 1947 · GSTIN: 33AAAAA0000A1Z5
+              </p>
+              <div className="pt-1 font-bold uppercase tracking-wider text-xs text-blue-900">
                 GOODS RECEIVED VOUCHER (INBOUND)
               </div>
             </div>
