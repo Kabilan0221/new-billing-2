@@ -50,6 +50,7 @@ import {
   INITIAL_PRODUCTS,
   INITIAL_SUPPLIERS,
 } from '../data/initialData';
+import { transliterateTamil } from './tamilTransliterate';
 
 export interface SupplierFilter {
   searchTerm?: string;
@@ -745,6 +746,7 @@ class SQLiteIndexedEngine {
 
     let candidateList: Product[] = [];
     const term = filter.searchTerm?.trim().toLowerCase();
+    const translitTerm = term ? transliterateTamil(term).toLowerCase() : '';
 
     // 1. Fast index lookup if exact barcode or code
     if (term && this.barcodeIndex.has(term)) {
@@ -770,10 +772,11 @@ class SQLiteIndexedEngine {
         if (term) {
           const matchEn = p.nameEn.toLowerCase().includes(term);
           const matchTa = p.nameTa ? p.nameTa.toLowerCase().includes(term) : false;
+          const matchTranslitTa = translitTerm && p.nameTa ? p.nameTa.toLowerCase().includes(translitTerm) : false;
           const matchBar = p.barcode.toLowerCase().includes(term);
           const matchCode = p.productCode.toLowerCase().includes(term);
 
-          if (!matchEn && !matchTa && !matchBar && !matchCode) continue;
+          if (!matchEn && !matchTa && !matchTranslitTa && !matchBar && !matchCode) continue;
         }
 
         candidateList.push(p);
@@ -846,9 +849,11 @@ class SQLiteIndexedEngine {
 
     // Duplicate checks
     if (cleanBarcode) {
-      const existing = this.barcodeIndex.get(cleanBarcode);
+      const existing =
+        this.barcodeIndex.get(cleanBarcode) ||
+        this.products.find((p) => p.id !== product.id && p.barcode?.trim().toLowerCase() === cleanBarcode);
       if (existing && existing.id !== product.id) {
-        errors.push(`Barcode '${product.barcode}' is already assigned to '${existing.nameEn}'.`);
+        errors.push(`Barcode '${product.barcode}' is already assigned to '${existing.nameEn}'. Barcode number double vara kudathu (Duplicate barcode not allowed).`);
       }
     }
 
@@ -903,6 +908,9 @@ class SQLiteIndexedEngine {
         wholesaleRate: Number(product.wholesaleRate) || 0,
         mrp: Number(product.mrp) || 0,
         taxRate: Number(product.taxRate) || 0,
+        sgstRate: product.sgstRate !== undefined ? Number(product.sgstRate) : ((Number(product.taxRate) || 0) / 2),
+        cgstRate: product.cgstRate !== undefined ? Number(product.cgstRate) : ((Number(product.taxRate) || 0) / 2),
+        igstRate: product.igstRate !== undefined ? Number(product.igstRate) : (Number(product.taxRate) || 0),
         openingStock: Number(product.openingStock) || 0,
         currentStock: Number(product.currentStock ?? product.openingStock) || 0,
         reorderLevel: Number(product.reorderLevel) || 5,
@@ -949,8 +957,8 @@ class SQLiteIndexedEngine {
     if (!p) return false;
     this.products = this.products.filter(item => item.id !== id);
     this.idIndex.delete(id);
-    this.barcodeIndex.delete(p.barcode);
-    this.codeIndex.delete(p.productCode);
+    if (p.barcode) this.barcodeIndex.delete(p.barcode.trim().toLowerCase());
+    if (p.productCode) this.codeIndex.delete(p.productCode.trim().toLowerCase());
     if (p.categoryId) this.categoryIndex.get(p.categoryId)?.delete(p);
     if (p.brandId) this.brandIndex.get(p.brandId)?.delete(p);
     this.logAudit('Product', id.toString(), 'DELETE' as any, `Deleted product '${p.nameEn}'`);
@@ -3528,20 +3536,84 @@ class SQLiteIndexedEngine {
   }
 
   // Barcode Studio Services
-  public generateUniqueBarcode(format: 'Code128' | 'EAN13' = 'Code128', prefix: string = '890'): string {
-    const rnd = Math.floor(100000 + Math.random() * 900000);
-    if (format === 'EAN13') {
-      const first12 = `${prefix}${String(Date.now()).slice(-6)}${rnd}`.slice(0, 12);
-      let sum = 0;
-      for (let i = 0; i < 12; i++) {
-        const d = parseInt(first12[i], 10);
-        sum += i % 2 === 0 ? d : d * 3;
-      }
-      const mod = sum % 10;
-      const check = mod === 0 ? 0 : 10 - mod;
-      return `${first12}${check}`;
+  public generateUniqueBarcode(prefixOrFormat: string = 'A385', format: 'Code128' | 'EAN13' = 'Code128'): string {
+    let prefix = 'A385';
+    let fmt = format;
+    if (prefixOrFormat === 'EAN13') {
+      fmt = 'EAN13';
+      prefix = '890';
+    } else if (prefixOrFormat === 'Code128') {
+      fmt = 'Code128';
+      prefix = 'A385';
+    } else if (prefixOrFormat) {
+      prefix = prefixOrFormat.trim().toUpperCase();
     }
-    return `${prefix || 'BC'}${Date.now().toString().slice(-4)}${rnd}`;
+
+    if (fmt === 'EAN13') {
+      let eanCandidate = '';
+      let attempts = 0;
+      do {
+        attempts++;
+        const rnd = Math.floor(100000000 + Math.random() * 900000000).toString();
+        const first12 = ((prefix.match(/^\d+$/) ? prefix : '890') + rnd).slice(0, 12);
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+          const d = parseInt(first12[i], 10);
+          sum += i % 2 === 0 ? d : d * 3;
+        }
+        const mod = sum % 10;
+        const check = mod === 0 ? 0 : 10 - mod;
+        eanCandidate = `${first12}${check}`;
+      } while (
+        (this.barcodeIndex.has(eanCandidate.toLowerCase()) ||
+          this.products.some((p) => p.barcode?.trim().toLowerCase() === eanCandidate.toLowerCase())) &&
+        attempts < 100
+      );
+      return eanCandidate;
+    }
+
+    // Default: Auto generate sequential barcode starting with A385 (or prefix)
+    // Find the current highest numeric sequence with this prefix
+    const regex = new RegExp(`^${prefix}(\\d+)$`, 'i');
+    let maxNum = 0;
+    for (const p of this.products) {
+      if (!p.barcode) continue;
+      const match = p.barcode.trim().match(regex);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > maxNum) {
+          maxNum = val;
+        }
+      }
+    }
+
+    // Next sequential number starting with A385
+    let counter = Math.max(1, maxNum + 1);
+    let candidate = `${prefix}${String(counter).padStart(4, '0')}`;
+
+    // Guarantee uniqueness: Barcode number double vara kudathu!
+    while (
+      this.barcodeIndex.has(candidate.toLowerCase()) ||
+      this.products.some((p) => p.barcode?.trim().toLowerCase() === candidate.toLowerCase())
+    ) {
+      counter++;
+      candidate = `${prefix}${String(counter).padStart(4, '0')}`;
+    }
+
+    return candidate;
+  }
+
+  public isBarcodeUnique(barcode: string, excludeProductId?: number): { isUnique: boolean; conflictProduct?: Product } {
+    if (!barcode || !barcode.trim()) return { isUnique: true };
+    const clean = barcode.trim().toLowerCase();
+    const existing =
+      this.barcodeIndex.get(clean) ||
+      this.products.find((p) => p.barcode?.trim().toLowerCase() === clean);
+
+    if (existing && existing.id !== excludeProductId) {
+      return { isUnique: false, conflictProduct: existing };
+    }
+    return { isUnique: true };
   }
 
   public assignBarcodeToProduct(
@@ -3555,10 +3627,15 @@ class SQLiteIndexedEngine {
     const clean = newBarcode?.trim();
     if (!clean) return { success: false, errors: ['Barcode cannot be empty.'] };
 
-    // Check duplicate
-    const existing = this.barcodeIndex.get(clean.toLowerCase());
+    // Check duplicate ("double vara kudathu")
+    const existing =
+      this.barcodeIndex.get(clean.toLowerCase()) ||
+      this.products.find((pr) => pr.id !== productId && pr.barcode?.trim().toLowerCase() === clean.toLowerCase());
     if (existing && existing.id !== productId) {
-      return { success: false, errors: [`Barcode '${clean}' is already assigned to '${existing.nameEn}'.`] };
+      return {
+        success: false,
+        errors: [`Barcode '${clean}' is already assigned to '${existing.nameEn}'. Barcode number double vara kudathu (Duplicate barcode not allowed).`],
+      };
     }
 
     if (p.barcode && p.barcode !== clean && !force) {

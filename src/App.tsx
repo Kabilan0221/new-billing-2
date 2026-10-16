@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import { X } from 'lucide-react';
 import { Win7Sidebar, SIDEBAR_ITEMS } from './components/Win7Sidebar';
 import { ProductMaster } from './components/ProductMaster';
-import { ProductDialog } from './components/ProductDialog';
 import { CategoryBrandDialog } from './components/CategoryBrandDialog';
 import { ExcelDialog } from './components/ExcelDialog';
 import { BarcodeDialog } from './components/BarcodeDialog';
@@ -20,6 +19,7 @@ import { ReportsView } from './components/ReportsView';
 import { DataManagementView } from './components/DataManagementView';
 import { SettingsView } from './components/SettingsView';
 import { CustomerManagement } from './components/CustomerManagement';
+import { BackupRestoreView } from './components/BackupRestoreView';
 import { db } from './services/dbEngine';
 import { Product } from './types';
 
@@ -64,10 +64,7 @@ export default function App() {
       } else if (e.key === 'F2') {
         e.preventDefault();
         setActiveNav('products');
-        if (activeNav === 'products' && !isProductDialogOpen) {
-          setEditingProduct(null);
-          setIsProductDialogOpen(true);
-        }
+        window.dispatchEvent(new CustomEvent('shopbilling:add-product'));
       } else if (e.key === 'F3') {
         e.preventDefault();
         setActiveNav('inbound');
@@ -133,13 +130,13 @@ export default function App() {
   };
 
   const handleOpenAddProduct = () => {
-    setEditingProduct(null);
-    setIsProductDialogOpen(true);
+    setActiveNav('products');
+    window.dispatchEvent(new CustomEvent('shopbilling:add-product'));
   };
 
   const handleOpenEditProduct = (p: Product) => {
-    setEditingProduct(p);
-    setIsProductDialogOpen(true);
+    setActiveNav('products');
+    window.dispatchEvent(new CustomEvent('shopbilling:edit-product', { detail: p }));
   };
 
   const handleOpenCategoryManager = () => {
@@ -165,6 +162,30 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2 text-slate-300">
+          <div className="flex items-center bg-[#0f1c30] p-0.5 rounded border border-slate-700/60">
+            <button
+              type="button"
+              onClick={() => setActiveView('desktop')}
+              className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                activeView === 'desktop'
+                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              POS Retail App
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView('solution')}
+              className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                activeView === 'solution'
+                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              C# Solution (.NET 4.8)
+            </button>
+          </div>
           <span className="font-mono text-slate-300 text-[11px] hidden md:inline mr-1">{currentTime}</span>
           <div className="h-4 w-[1px] bg-slate-600/80 mx-1" />
           <div className="flex items-center -mr-2">
@@ -319,6 +340,8 @@ export default function App() {
 
               {activeNav === 'settings' && <SettingsView />}
 
+              {activeNav === 'backup' && <BackupRestoreView />}
+
               {activeNav !== 'products' &&
                 activeNav !== 'inbound' &&
                 activeNav !== 'customers' &&
@@ -343,17 +366,10 @@ export default function App() {
           </div>
         ) : (
           /* Visual Studio Solution & C# Source Explorer View */
-          <SolutionExplorer />
+          <SolutionExplorer onBackToApp={() => setActiveView('desktop')} />
         )}
 
       {/* Modals & Dialogs */}
-      <ProductDialog
-        product={editingProduct}
-        isOpen={isProductDialogOpen}
-        onClose={() => setIsProductDialogOpen(false)}
-        onSaved={refreshData}
-      />
-
       <CategoryBrandDialog
         initialTab={categoryDialogTab}
         isOpen={isCategoryDialogOpen}

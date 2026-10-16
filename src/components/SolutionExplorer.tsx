@@ -147,7 +147,11 @@ const SOLUTION_TREE: FileNode = {
   ],
 };
 
-export const SolutionExplorer: React.FC = () => {
+interface SolutionExplorerProps {
+  onBackToApp?: () => void;
+}
+
+export const SolutionExplorer: React.FC<SolutionExplorerProps> = ({ onBackToApp }) => {
   const [selectedFile, setSelectedFile] = useState<FileNode>({
     name: 'ProductMasterControl.cs',
     path: 'src/ShopBilling.UI/Forms/ProductMasterControl.cs',
@@ -247,9 +251,18 @@ export const SolutionExplorer: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {onBackToApp && (
+              <button
+                type="button"
+                onClick={onBackToApp}
+                className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 rounded text-[11px] text-white font-medium transition-colors cursor-pointer"
+              >
+                <span>← Back to POS App</span>
+              </button>
+            )}
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[11px] text-slate-200 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 bg-slate-700 hover:bg-slate-600 rounded text-[11px] text-slate-200 transition-colors cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied' : 'Copy Path'}</span>

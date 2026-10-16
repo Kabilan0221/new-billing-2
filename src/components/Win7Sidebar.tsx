@@ -13,6 +13,7 @@ import {
   Trash2,
   Settings,
   Building,
+  HardDriveDownload,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -38,6 +39,7 @@ export const SIDEBAR_ITEMS: NavItem[] = [
   { id: 11, key: 'reports', label: 'Reports', shortcut: 'F9', icon: BarChart3, isPhase1Active: true },
   { id: 12, key: 'data', label: 'Delete Management', icon: Trash2, isPhase1Active: true },
   { id: 13, key: 'settings', label: 'Settings', icon: Settings, isPhase1Active: true },
+  { id: 14, key: 'backup', label: 'Backup & Restore', icon: HardDriveDownload, isPhase1Active: true },
 ];
 
 interface Win7SidebarProps {

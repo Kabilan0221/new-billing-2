@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Sparkles, Check, AlertCircle, Calculator } from 'lucide-react';
 import { Product } from '../types';
 import { db } from '../services/dbEngine';
+import { TamilInput } from './TamilInput';
 
 interface ProductDialogProps {
   product: Product | null;
@@ -34,7 +35,10 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
   const [saleRate, setSaleRate] = useState<number>(0);
   const [wholesaleRate, setWholesaleRate] = useState<number>(0);
   const [mrp, setMrp] = useState<number>(0);
-  const [taxRate, setTaxRate] = useState<number>(5);
+  const [taxRate, setTaxRate] = useState<number>(0);
+  const [sgstRate, setSgstRate] = useState<number>(0);
+  const [cgstRate, setCgstRate] = useState<number>(0);
+  const [igstRate, setIgstRate] = useState<number>(0);
 
   const [openingStock, setOpeningStock] = useState<number>(0);
   const [currentStock, setCurrentStock] = useState<number>(0);
@@ -69,6 +73,9 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
       setWholesaleRate(product.wholesaleRate);
       setMrp(product.mrp);
       setTaxRate(product.taxRate);
+      setSgstRate(product.sgstRate ?? product.taxRate / 2);
+      setCgstRate(product.cgstRate ?? product.taxRate / 2);
+      setIgstRate(product.igstRate ?? product.taxRate);
 
       setOpeningStock(product.openingStock);
       setCurrentStock(product.currentStock);
@@ -79,7 +86,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
       // New Product default
       const stamp = Date.now().toString().slice(-6);
       setProductCode(`PRD${stamp}`);
-      generateEan13();
+      setBarcode(db.generateUniqueBarcode('A385'));
       setNameEn('');
       setNameTa('');
       setCategoryId('');
@@ -91,7 +98,10 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
       setSaleRate(0);
       setWholesaleRate(0);
       setMrp(0);
-      setTaxRate(5);
+      setTaxRate(0);
+      setSgstRate(0);
+      setCgstRate(0);
+      setIgstRate(0);
       setOpeningStock(0);
       setCurrentStock(0);
       setReorderLevel(5);
@@ -109,22 +119,23 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
     return { pct: Number(pct), rupees: diff, isNegative: diff < 0 };
   }, [purchaseRate, saleRate]);
 
-  // EAN-13 generator with standard checksum
-  const generateEan13 = () => {
-    const raw = '890' + Math.floor(100000000 + Math.random() * 900000000).toString();
-    const prefix12 = raw.slice(0, 12);
-    let sum = 0;
-    for (let i = 0; i < 12; i++) {
-      const d = parseInt(prefix12[i], 10);
-      sum += i % 2 === 0 ? d : d * 3;
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    setBarcode(prefix12 + checkDigit.toString());
+  // Auto Barcode generator starting with A385 (Unique guaranteed)
+  const generateA385Barcode = () => {
+    const nextBc = db.generateUniqueBarcode('A385');
+    setBarcode(nextBc);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationErrors([]);
+
+    const barcodeCheck = db.isBarcodeUnique(barcode, product?.id);
+    if (!barcodeCheck.isUnique) {
+      setValidationErrors([
+        `Barcode '${barcode}' is already assigned to '${barcodeCheck.conflictProduct?.nameEn}'. Barcode number double vara kudathu!`,
+      ]);
+      return;
+    }
 
     const payload: Partial<Product> = {
       id: product ? product.id : undefined,
@@ -142,6 +153,9 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
       wholesaleRate: Number(wholesaleRate) || 0,
       mrp: Number(mrp) || 0,
       taxRate: Number(taxRate) || 0,
+      sgstRate: Number(sgstRate) || 0,
+      cgstRate: Number(cgstRate) || 0,
+      igstRate: Number(igstRate) || 0,
       openingStock: Number(openingStock) || 0,
       currentStock: Number(currentStock) || 0,
       reorderLevel: Number(reorderLevel) || 5,
@@ -221,23 +235,32 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
 
               <div className="md:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-slate-600 font-medium">Barcode (EAN-13 / Code 128) *</label>
+                  <label className="text-slate-600 font-medium">Barcode (பார்கோடு) *</label>
                   <button
                     type="button"
-                    onClick={generateEan13}
-                    className="text-[10px] text-[#106ebe] hover:underline font-semibold"
+                    onClick={generateA385Barcode}
+                    className="text-xs text-[#106ebe] hover:underline font-semibold flex items-center gap-1"
                   >
-                    Generate EAN-13
+                    <span>⚡ Auto Generate (A385...)</span>
                   </button>
                 </div>
                 <input
                   type="text"
                   required
                   value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="8901234567890"
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded font-mono focus:border-[#106ebe] focus:outline-none"
+                  onChange={(e) => setBarcode(e.target.value.toUpperCase())}
+                  placeholder="e.g. A3850001"
+                  className={`w-full px-2.5 py-1.5 bg-white border ${
+                    barcode && !db.isBarcodeUnique(barcode, product?.id).isUnique
+                      ? 'border-red-500 bg-red-50 text-red-900 ring-1 ring-red-500 font-bold'
+                      : 'border-slate-300'
+                  } rounded font-mono focus:border-[#106ebe] focus:outline-none`}
                 />
+                {barcode && !db.isBarcodeUnique(barcode, product?.id).isUnique && (
+                  <p className="text-[11px] text-red-600 font-bold mt-1">
+                    ⚠️ இந்த பார்கோடு ஏற்கனவே '{db.isBarcodeUnique(barcode, product?.id).conflictProduct?.nameEn}' பொருளுக்கு உள்ளது! Barcode number double vara kudathu.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -257,18 +280,18 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
 
               <div>
                 <label className="block text-slate-600 font-medium mb-1">Name in Tamil (தமிழ் பெயர்)</label>
-                <input
-                  type="text"
+                <TamilInput
                   value={nameTa}
-                  onChange={(e) => setNameTa(e.target.value)}
-                  placeholder="எ.கா. பொன்னி புழுங்கல் அரிசி 5கிகி"
+                  onChange={setNameTa}
+                  englishName={nameEn}
+                  placeholder="எ.கா. பொன்னி அரிசி (type in Tanglish)"
                   className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded font-sans focus:border-[#106ebe] focus:outline-none"
                 />
               </div>
             </div>
 
-            {/* Categories & Brands */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            {/* Categories */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
               <div>
                 <label className="block text-slate-600 font-medium mb-1">Category</label>
                 <select
@@ -299,22 +322,6 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
                   {subcategories.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-600 font-medium mb-1">Brand</label>
-                <select
-                  value={brandId}
-                  onChange={(e) => setBrandId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded focus:border-[#106ebe] focus:outline-none"
-                >
-                  <option value="">-- None --</option>
-                  {brands.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
                     </option>
                   ))}
                 </select>
@@ -380,7 +387,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
                 <label className="block text-slate-600 font-medium mb-1">Pur. Rate (₹)</label>
                 <input
@@ -431,20 +438,78 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
                 />
                 <span className="text-[10px] text-slate-500 font-medium block mt-0.5">Max Retail Price</span>
               </div>
+            </div>
+
+            {/* GST Tax Structure - Editable inputs, no dropdown */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-200/60">
+              <div>
+                <label className="block text-slate-600 font-medium mb-1">SGST % (State GST)</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={sgstRate}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                    setSgstRate(val);
+                    if (cgstRate === sgstRate) {
+                      setCgstRate(val);
+                      setIgstRate(Math.round((val * 2) * 100) / 100);
+                      setTaxRate(Math.round((val * 2) * 100) / 100);
+                    } else {
+                      setIgstRate(Math.round((val + cgstRate) * 100) / 100);
+                      setTaxRate(Math.round((val + cgstRate) * 100) / 100);
+                    }
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded font-mono focus:border-[#106ebe] focus:outline-none"
+                  placeholder="0"
+                />
+              </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1">GST Tax %</label>
-                <select
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(Number(e.target.value))}
-                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded font-mono focus:border-[#106ebe] focus:outline-none"
-                >
-                  <option value={0}>0% (Exempt)</option>
-                  <option value={5}>5% (GST)</option>
-                  <option value={12}>12% (GST)</option>
-                  <option value={18}>18% (GST)</option>
-                  <option value={28}>28% (GST)</option>
-                </select>
+                <label className="block text-slate-600 font-medium mb-1">CGST % (Central GST)</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={cgstRate}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                    setCgstRate(val);
+                    if (sgstRate === cgstRate) {
+                      setSgstRate(val);
+                      setIgstRate(Math.round((val * 2) * 100) / 100);
+                      setTaxRate(Math.round((val * 2) * 100) / 100);
+                    } else {
+                      setIgstRate(Math.round((sgstRate + val) * 100) / 100);
+                      setTaxRate(Math.round((sgstRate + val) * 100) / 100);
+                    }
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded font-mono focus:border-[#106ebe] focus:outline-none"
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-medium mb-1">IGST % (Integrated GST)</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={igstRate}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                    setIgstRate(val);
+                    setTaxRate(val);
+                    setSgstRate(Math.round((val / 2) * 100) / 100);
+                    setCgstRate(Math.round((val / 2) * 100) / 100);
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded font-mono focus:border-[#106ebe] focus:outline-none"
+                  placeholder="0"
+                />
               </div>
             </div>
           </div>

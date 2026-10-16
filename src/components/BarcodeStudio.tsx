@@ -113,7 +113,7 @@ export const BarcodeStudio: React.FC<BarcodeStudioProps> = ({ onRefreshData, onN
     const item = items.find((i) => i.productId === productId);
     if (!item) return;
 
-    const newBc = db.generateUniqueBarcode(selectedFormat);
+    const newBc = db.generateUniqueBarcode('A385');
     if (item.barcode) {
       const confirm = window.confirm(
         `Product '${item.nameEn}' already has barcode '${item.barcode}'.\nOverwrite with newly generated barcode '${newBc}'?`

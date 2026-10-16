@@ -926,22 +926,6 @@ export const StockManagement: React.FC<StockManagementProps> = ({
                   ))}
                 </select>
 
-                {/* Brand Dropdown */}
-                <select
-                  value={selectedBrand}
-                  onChange={(e) => {
-                    setSelectedBrand(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded focus:border-blue-500 focus:outline-hidden"
-                >
-                  <option value={0}>All Brands</option>
-                  {brands.map((b: Brand) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
 
                 {/* Stock Status Dropdown */}
                 <select
@@ -1063,8 +1047,7 @@ export const StockManagement: React.FC<StockManagementProps> = ({
                             : row.adjustmentQuantity}
                         </td>
                         <td className="py-2 px-3 text-right font-mono font-bold text-sm bg-blue-50/50 border-x border-blue-100 text-blue-950">
-                          {row.currentStock}{' '}
-                          <span className="text-[10px] text-slate-500 font-normal">{row.unit}</span>
+                          {row.currentStock}
                         </td>
                         <td className="py-2 px-3 text-right font-mono text-slate-600">{row.reorderLevel}</td>
                         <td className="py-2 px-3 text-right font-mono text-slate-700">
