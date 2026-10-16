@@ -175,6 +175,8 @@ class SQLiteIndexedEngine {
         code: c.code,
         name: c.name,
         mobile: c.mobile || '',
+        gstin: c.gstin || '',
+        address: c.address || '',
         currentBalance: c.currentBalance || 0,
         isActive: c.isActive !== undefined ? c.isActive : true,
         createdAt: c.createdAt || new Date().toISOString(),
@@ -2442,6 +2444,8 @@ class SQLiteIndexedEngine {
         ...this.customers[idx],
         name,
         mobile: cust.mobile !== undefined ? cust.mobile.trim() : this.customers[idx].mobile,
+        gstin: cust.gstin !== undefined ? cust.gstin.trim().toUpperCase() : (this.customers[idx].gstin || ''),
+        address: cust.address !== undefined ? cust.address.trim() : (this.customers[idx].address || ''),
         isActive: cust.isActive !== undefined ? cust.isActive : this.customers[idx].isActive,
         updatedAt: new Date().toISOString(),
       };
@@ -2455,6 +2459,8 @@ class SQLiteIndexedEngine {
         code: `CUST${this.nextCustomerId.toString().padStart(3, '0')}`,
         name,
         mobile: cust.mobile?.trim() || '',
+        gstin: cust.gstin?.trim().toUpperCase() || '',
+        address: cust.address?.trim() || '',
         currentBalance: 0,
         isActive: cust.isActive !== undefined ? cust.isActive : true,
         createdAt: new Date().toISOString(),
@@ -4123,19 +4129,15 @@ class SQLiteIndexedEngine {
       return { success: false, errors };
     }
 
-    if (s.gstNumber && s.gstNumber.trim().length !== 15) {
-      errors.push('GSTIN must be exactly 15 characters long (e.g. 33AAAAA0000A1Z5).');
-      return { success: false, errors };
-    }
-
     this.appSettings = {
       ...this.appSettings,
       ...s,
       storeName: s.storeName.trim(),
-      gstNumber: s.gstNumber?.trim().toUpperCase() || '',
+      gstNumber: s.gstNumber !== undefined ? s.gstNumber.trim().toUpperCase() : this.appSettings.gstNumber,
     };
 
     this.logAudit('Settings', 'Global', 'UPDATE', 'Updated application settings and retail business profile.');
+    this.saveToLocalStorage();
     return { success: true, errors: [], settings: { ...this.appSettings } };
   }
 

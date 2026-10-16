@@ -94,6 +94,8 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
     setFormData({
       name: '',
       mobile: '',
+      gstin: '',
+      address: '',
       isActive: true,
     });
     setFormErrors([]);
@@ -106,6 +108,8 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
       id: c.id,
       name: c.name,
       mobile: c.mobile || '',
+      gstin: c.gstin || '',
+      address: c.address || '',
       isActive: c.isActive,
     });
     setFormErrors([]);
@@ -482,6 +486,18 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                       </div>
                     </div>
                     <div>
+                      <span className="text-slate-500">GSTIN / GST Number:</span>
+                      <div className="font-mono font-bold text-blue-900 mt-1">
+                        {selectedCustomer.gstin || 'Unregistered Consumer (—)'}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-slate-500">Address / City:</span>
+                      <div className="text-slate-800 mt-1">
+                        {selectedCustomer.address || '—'}
+                      </div>
+                    </div>
+                    <div>
                       <span className="text-slate-500">Account Status:</span>
                       <div className="mt-1">
                         <span
@@ -657,6 +673,29 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                     className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden font-mono"
                     placeholder="10-digit mobile number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">GSTIN / GST Number (Optional)</label>
+                  <input
+                    type="text"
+                    maxLength={15}
+                    value={formData.gstin || ''}
+                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden font-mono uppercase"
+                    placeholder="e.g. 33AAAAA0000A1Z5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">Address (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.address || ''}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-[#106ebe] focus:outline-hidden text-xs"
+                    placeholder="Door No, Street, City"
                   />
                 </div>
               </div>

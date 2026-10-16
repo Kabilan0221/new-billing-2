@@ -29,6 +29,7 @@ export default function App() {
   const [activeNav, setActiveNav] = useState<string>('products'); // Default to Products
   const [selectedSupplierForInbound, setSelectedSupplierForInbound] = useState<number | undefined>(undefined);
   const [dataVersion, setDataVersion] = useState(0);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Dialogs state
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
@@ -158,22 +159,22 @@ export default function App() {
   };
 
   return (
-    <div className="w-screen h-screen bg-white flex flex-col overflow-hidden font-sans">
+    <div className="w-full h-full max-w-full max-h-screen print:w-full print:h-auto print:overflow-visible bg-white flex flex-col overflow-hidden font-sans select-none">
       {/* Header Store Banner */}
-      <div className="bg-[#182b49] text-white px-4 py-2 flex flex-wrap items-center justify-between border-b border-[#122035] text-xs shrink-0">
-        <div className="flex items-center gap-2.5">
-          <SVTLogo size={28} className="drop-shadow-xs" />
-          <div className="flex flex-col">
+      <div id="app-header" className="no-print bg-[#182b49] text-white px-3 py-1.5 flex items-center justify-between border-b border-[#122035] text-xs shrink-0 whitespace-nowrap overflow-hidden">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <SVTLogo size={24} className="drop-shadow-xs shrink-0" />
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-bold tracking-wider text-amber-300 text-xs">ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)</span>
-              <span className="hidden lg:inline text-[10px] text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-600/40">
+              <span className="font-bold tracking-wider text-amber-300 text-xs truncate">ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)</span>
+              <span className="hidden xl:inline text-[10px] text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-600/40 shrink-0">
                 சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
               </span>
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-300">
-              <span>மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502</span>
-              <span className="hidden md:inline text-slate-400">|</span>
-              <span className="hidden md:inline font-mono text-[10px] text-slate-300">📱 8143 84 8143 / 9941333457 / 044 2723 1947</span>
+            <div className="flex items-center gap-2 text-[11px] text-slate-300 truncate">
+              <span className="truncate">மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502</span>
+              <span className="hidden lg:inline text-slate-400">|</span>
+              <span className="hidden lg:inline font-mono text-[10px] text-slate-300">📱 8143 84 8143 / 9941333457</span>
             </div>
           </div>
         </div>
@@ -234,6 +235,8 @@ export default function App() {
               onSelectNav={setActiveNav}
               productCount={metrics.total}
               lowStockCount={metrics.lowStock}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed((c) => !c)}
             />
 
             {/* Active Content Module */}

@@ -42,6 +42,9 @@ import { db } from '../services/dbEngine';
 import { playScannerBeep } from '../services/soundEffects';
 import { ProductDialog } from './ProductDialog';
 import { SVTLogo } from './SVTLogo';
+import { A4DotMatrixInvoice } from './A4DotMatrixInvoice';
+import { printHtmlDirectly } from '../services/printService';
+import { generateA4DotMatrixHtml, generateThermalReceiptHtml } from '../services/a4InvoiceHtmlGenerator';
 import {
   Product,
   Customer,
@@ -1251,9 +1254,9 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       {/* TAB 1: POS BILLING TERMINAL (MODERN SCREENSHOT FORMAT)   */}
       {/* ========================================================= */}
       {activeSubTab === 'pos' && (
-        <div className="flex-1 flex flex-col h-[calc(100%-40px)] bg-slate-100 overflow-hidden p-1.5 sm:p-2">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-100 overflow-hidden p-1.5">
           {/* Main Card with rounded corners and border matching image */}
-          <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+          <div className="flex-1 flex flex-col min-h-0 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
             {/* Top Bar: Barcode/Search Input + Add Item + Camera Scan + Quick Add */}
             <div className="px-3 py-2 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 bg-white">
               <form onSubmit={handleBarcodeSubmit} className="flex-1 relative" ref={searchContainerRef}>
@@ -1381,24 +1384,24 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 </div>
               ) : (
                 /* Cart Items Table */
-                <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-left text-xs border-separate border-spacing-0">
-                      <thead className="sticky top-0 z-10 bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                <div className="flex-1 flex flex-col min-h-0 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                    <table className="w-full table-fixed text-left text-xs border-separate border-spacing-0">
+                      <thead className="sticky top-0 z-10 bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 select-none">
                         <tr>
-                          <th className="py-2.5 px-3 w-10 text-center border-b border-r border-slate-200">#</th>
-                          <th className="py-2.5 px-3 border-b border-r border-slate-200 w-32">Barcode / SKU</th>
-                          <th className="py-2.5 px-3 border-b border-r border-slate-200">Item Description</th>
-                          <th className="py-2.5 px-2 text-center w-28 border-b border-r border-slate-200">Qty</th>
-                          <th className="py-2.5 px-2 text-right w-20 border-b border-r border-slate-200">MRP (₹)</th>
-                          <th className="py-2.5 px-2 text-right w-22 border-b border-r border-slate-200 font-bold text-slate-800">Rate (₹)</th>
-                          <th className="py-2.5 px-2 text-center w-16 border-b border-r border-slate-200">Disc %</th>
-                          <th className="py-2.5 px-1.5 text-center w-16 border-b border-r border-slate-200 text-blue-800">CGST %</th>
-                          <th className="py-2.5 px-1.5 text-center w-16 border-b border-r border-slate-200 text-blue-800">SGST %</th>
-                          <th className="py-2.5 px-1.5 text-center w-16 border-b border-r border-slate-200 text-indigo-800">IGST %</th>
-                          <th className="py-2.5 px-2 text-right w-22 border-b border-r border-slate-200">GST (₹)</th>
-                          <th className="py-2.5 px-2.5 text-right w-24 border-b border-r border-slate-200 font-bold text-emerald-800">Total (₹)</th>
-                          <th className="py-2.5 px-2 w-10 text-center border-b border-slate-200"></th>
+                          <th className="py-2 px-1 text-center border-b border-r border-slate-200 w-[3.5%] truncate">#</th>
+                          <th className="py-2 px-2 border-b border-r border-slate-200 w-[11.5%] truncate">Barcode</th>
+                          <th className="py-2 px-2 border-b border-r border-slate-200 w-[24%] truncate">Item Description</th>
+                          <th className="py-2 px-1 text-center w-[11%] border-b border-r border-slate-200 truncate">Qty</th>
+                          <th className="py-2 px-1 text-right w-[7%] border-b border-r border-slate-200 truncate">MRP ₹</th>
+                          <th className="py-2 px-1 text-right w-[7.5%] border-b border-r border-slate-200 font-bold text-slate-800 truncate">Rate ₹</th>
+                          <th className="py-2 px-1 text-center w-[4.5%] border-b border-r border-slate-200 truncate">Disc%</th>
+                          <th className="py-2 px-0.5 text-center w-[4.5%] border-b border-r border-slate-200 text-blue-800 truncate">CGST%</th>
+                          <th className="py-2 px-0.5 text-center w-[4.5%] border-b border-r border-slate-200 text-blue-800 truncate">SGST%</th>
+                          <th className="py-2 px-0.5 text-center w-[4.5%] border-b border-r border-slate-200 text-indigo-800 truncate">IGST%</th>
+                          <th className="py-2 px-1 text-right w-[6.5%] border-b border-r border-slate-200 truncate">GST ₹</th>
+                          <th className="py-2 px-1.5 text-right w-[8%] border-b border-r border-slate-200 font-bold text-emerald-800 truncate">Total ₹</th>
+                          <th className="py-2 px-1 w-[3%] text-center border-b border-slate-200"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1407,27 +1410,27 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                           const isStockLow = prod && prod.currentStock < item.quantity;
                           return (
                             <tr key={item.id || idx} className="hover:bg-blue-50/40 transition-colors">
-                              <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px] border-r border-slate-100">{idx + 1}</td>
-                              <td className="py-2 px-3 font-mono text-slate-600 text-[11px] border-r border-slate-100">
-                                <div>{item.barcode || '—'}</div>
-                                <div className="text-[10px] text-slate-400">{item.productCode}</div>
+                              <td className="py-1.5 px-1 text-center text-slate-400 font-mono text-[11px] border-r border-slate-100">{idx + 1}</td>
+                              <td className="py-1.5 px-2 font-mono text-slate-600 text-[10px] border-r border-slate-100 truncate">
+                                <div className="truncate font-semibold">{item.barcode || '—'}</div>
+                                <div className="text-[9px] text-slate-400 truncate">{item.productCode}</div>
                               </td>
-                              <td className="py-2 px-3 border-r border-slate-100">
-                                <div className="font-semibold text-slate-900">{item.productName}</div>
-                                {prod?.nameTa && <div className="text-[10px] text-slate-500 font-sans">{prod.nameTa}</div>}
+                              <td className="py-1.5 px-2 border-r border-slate-100 truncate">
+                                <div className="font-semibold text-slate-900 truncate">{item.productName}</div>
+                                {prod?.nameTa && <div className="text-[10px] text-slate-500 font-sans truncate">{prod.nameTa}</div>}
                                 {isStockLow && (
-                                   <div className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
-                                    <AlertTriangle className="w-3 h-3 text-amber-600 inline" />
-                                    Available: {prod?.currentStock || 0}
+                                   <div className="text-[9px] text-amber-700 font-medium flex items-center gap-1 mt-0.5 truncate">
+                                    <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0 inline" />
+                                    <span>Avail: {prod?.currentStock || 0}</span>
                                   </div>
                                 )}
                               </td>
-                              <td className="py-2 px-2 text-center border-r border-slate-100">
-                                <div className="inline-flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden shadow-2xs">
+                              <td className="py-1 px-1 text-center border-r border-slate-100">
+                                <div className="inline-flex items-center border border-slate-200 rounded bg-slate-50 overflow-hidden shadow-2xs">
                                   <button
                                     type="button"
                                     onClick={() => updateCartItemQuantity(idx, item.quantity - 1)}
-                                    className="w-6 h-6 hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-600 cursor-pointer"
+                                    className="w-5 h-5 hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-600 cursor-pointer"
                                   >
                                     -
                                   </button>
@@ -1437,19 +1440,19 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                     step="any"
                                     value={item.quantity}
                                     onChange={(e) => updateCartItemQuantity(idx, parseFloat(e.target.value) || 0)}
-                                    className="w-12 h-6 text-center font-mono font-bold text-xs focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="w-8 h-5 text-center font-mono font-bold text-[11px] focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => updateCartItemQuantity(idx, item.quantity + 1)}
-                                    className="w-6 h-6 hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-600 cursor-pointer"
+                                    className="w-5 h-5 hover:bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-600 cursor-pointer"
                                   >
                                     +
                                   </button>
                                 </div>
                               </td>
                               {/* MRP Edit Box */}
-                              <td className="py-2 px-2 text-right border-r border-slate-100">
+                              <td className="py-1 px-1 text-right border-r border-slate-100">
                                 <input
                                   type="number"
                                   min="0"
@@ -1457,33 +1460,33 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                   value={item.mrp !== undefined ? item.mrp : item.rate}
                                   onChange={(e) => updateCartItemMrp(idx, parseFloat(e.target.value) || 0)}
                                   placeholder="0.00"
-                                  className="w-18 px-1.5 py-0.5 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded text-right font-mono text-xs text-slate-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full max-w-[56px] px-1 py-0.5 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded text-right font-mono text-[11px] text-slate-700 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
-                              {/* Rate Edit Box: Final Price, GST deducted backwards */}
-                              <td className="py-2 px-2 text-right border-r border-slate-100 bg-emerald-50/20">
+                              {/* Rate Edit Box */}
+                              <td className="py-1 px-1 text-right border-r border-slate-100 bg-emerald-50/20">
                                 <input
                                   type="number"
                                   min="0"
                                   step="any"
                                   value={item.rate}
                                   onChange={(e) => updateCartItemRate(idx, parseFloat(e.target.value) || 0)}
-                                  title="Final Price: GST is deducted from this rate"
-                                  className="w-18 px-1.5 py-0.5 border border-emerald-300 focus:border-emerald-600 rounded text-right font-mono text-xs font-semibold text-slate-900 bg-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  title="Final Price: GST is deducted backwards"
+                                  className="w-full max-w-[56px] px-1 py-0.5 border border-emerald-300 focus:border-emerald-600 rounded text-right font-mono text-[11px] font-semibold text-slate-900 bg-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
-                              <td className="py-2 px-2 text-center border-r border-slate-100">
+                              <td className="py-1 px-0.5 text-center border-r border-slate-100">
                                 <input
                                   type="number"
                                   min="0"
                                   max="100"
                                   value={item.discountPercent || 0}
                                   onChange={(e) => updateCartItemDiscount(idx, parseFloat(e.target.value) || 0)}
-                                  className="w-12 px-1 py-0.5 border border-slate-200 rounded text-center font-mono text-xs text-slate-800 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full max-w-[34px] px-0.5 py-0.5 border border-slate-200 rounded text-center font-mono text-[11px] text-slate-800 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
                               {/* CGST % Edit Box */}
-                              <td className="py-2 px-1 text-center border-r border-slate-100 bg-blue-50/20">
+                              <td className="py-1 px-0.5 text-center border-r border-slate-100 bg-blue-50/20">
                                 <input
                                   type="number"
                                   min="0"
@@ -1492,11 +1495,11 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                   value={item.cgstRate ?? 0}
                                   onChange={(e) => updateCartItemCgst(idx, parseFloat(e.target.value) || 0)}
                                   placeholder="0"
-                                  className="w-12 px-1 py-0.5 border border-blue-200 focus:border-blue-500 rounded text-center font-mono text-xs text-blue-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full max-w-[34px] px-0.5 py-0.5 border border-blue-200 focus:border-blue-500 rounded text-center font-mono text-[11px] text-blue-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
                               {/* SGST % Edit Box */}
-                              <td className="py-2 px-1 text-center border-r border-slate-100 bg-blue-50/20">
+                              <td className="py-1 px-0.5 text-center border-r border-slate-100 bg-blue-50/20">
                                 <input
                                   type="number"
                                   min="0"
@@ -1505,11 +1508,11 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                   value={item.sgstRate ?? 0}
                                   onChange={(e) => updateCartItemSgst(idx, parseFloat(e.target.value) || 0)}
                                   placeholder="0"
-                                  className="w-12 px-1 py-0.5 border border-blue-200 focus:border-blue-500 rounded text-center font-mono text-xs text-blue-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full max-w-[34px] px-0.5 py-0.5 border border-blue-200 focus:border-blue-500 rounded text-center font-mono text-[11px] text-blue-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
                               {/* IGST % Edit Box */}
-                              <td className="py-2 px-1 text-center border-r border-slate-100 bg-indigo-50/20">
+                              <td className="py-1 px-0.5 text-center border-r border-slate-100 bg-indigo-50/20">
                                 <input
                                   type="number"
                                   min="0"
@@ -1518,19 +1521,19 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                                   value={item.igstRate ?? 0}
                                   onChange={(e) => updateCartItemIgst(idx, parseFloat(e.target.value) || 0)}
                                   placeholder="0"
-                                  className="w-12 px-1 py-0.5 border border-indigo-200 focus:border-indigo-500 rounded text-center font-mono text-xs text-indigo-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full max-w-[34px] px-0.5 py-0.5 border border-indigo-200 focus:border-indigo-500 rounded text-center font-mono text-[11px] text-indigo-900 bg-white font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </td>
-                              <td className="py-2 px-2.5 text-right font-mono tabular-nums text-slate-700 border-r border-slate-100">₹{item.taxAmount.toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right font-mono font-bold tabular-nums text-slate-900 border-r border-slate-100">₹{item.lineTotal.toFixed(2)}</td>
-                              <td className="py-2 px-2 text-center">
+                              <td className="py-1.5 px-1 text-right font-mono tabular-nums text-slate-700 border-r border-slate-100 text-[11px]">₹{item.taxAmount.toFixed(1)}</td>
+                              <td className="py-1.5 px-1 text-right font-mono font-bold tabular-nums text-slate-900 border-r border-slate-100 text-[11px]">₹{item.lineTotal.toFixed(1)}</td>
+                              <td className="py-1.5 px-1 text-center">
                                 <button
                                   type="button"
                                   onClick={() => removeCartItem(idx)}
-                                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
+                                  className="p-0.5 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
                                   title="Remove Item"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3 h-3" />
                                 </button>
                               </td>
                             </tr>
@@ -1560,10 +1563,10 @@ export const PosBilling: React.FC<PosBillingProps> = ({
               )}
             </div>
 
-            {/* Bottom Checkout Section: Ultra-Compact High-Density POS Layout */}
-            <div className="border-t border-slate-200 bg-white px-2.5 py-1.5 grid grid-cols-1 lg:grid-cols-12 gap-2 shrink-0 select-none">
-              {/* Column 1: CHECKOUT & Customer Details (col-span-4) */}
-              <div className="lg:col-span-4 flex flex-col justify-between">
+            {/* Bottom Checkout Section: Fixed Ultra-Compact POS Grid (Never Stacks Vertically) */}
+            <div className="border-t border-slate-200 bg-white px-2.5 py-1.5 grid grid-cols-12 gap-2 shrink-0 select-none">
+              {/* Column 1: Customer Details (col-span-4) */}
+              <div className="col-span-4 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between pb-0.5">
                     <span className="font-bold text-slate-800 text-[10px] tracking-wider uppercase">
@@ -1610,14 +1613,14 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                 </div>
               </div>
 
-              {/* Column 2: PAYMENT METHOD (col-span-5) */}
-              <div className="lg:col-span-5 lg:border-l lg:border-slate-200 lg:pl-2.5 flex flex-col justify-between">
+              {/* Column 2: PAYMENT METHOD (col-span-4) */}
+              <div className="col-span-4 border-l border-slate-200 pl-2 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between pb-0.5">
                     <span className="font-bold text-slate-800 text-[10px] tracking-wider uppercase">
                       PAYMENT METHOD
                     </span>
-                    <div className="flex items-center gap-1.5 text-[10px]">
+                    <div className="flex items-center gap-1 text-[10px]">
                       <span className="text-slate-500">Tendered:</span>
                       <input
                         type="number"
@@ -1626,112 +1629,109 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         value={tenderedAmount || ''}
                         onChange={(e) => setTenderedAmount(parseFloat(e.target.value) || 0)}
                         placeholder="0"
-                        className="w-16 px-1 py-0 bg-slate-50 border border-slate-200 rounded text-center font-mono text-[11px] text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-5"
+                        className="w-14 px-1 py-0 bg-slate-50 border border-slate-200 rounded text-center font-mono text-[10px] text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-5"
                       />
                     </div>
                   </div>
 
-                  {/* 4 buttons row in compact horizontal style */}
+                  {/* 4 buttons row */}
                   <div className="grid grid-cols-4 gap-1 mb-1">
-                    {/* Cash */}
                     <button
                       type="button"
                       onClick={() => {
                         setPaymentMethod('Cash');
                         setIsSplitMode(false);
                       }}
-                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
+                      className={`flex items-center justify-center gap-0.5 py-0.5 px-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer h-5.5 ${
                         paymentMethod === 'Cash' && !isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <Banknote className="w-3 h-3 shrink-0" />
+                      <Banknote className="w-2.5 h-2.5 shrink-0" />
                       <span>Cash</span>
                     </button>
 
-                    {/* UPI/QR */}
                     <button
                       type="button"
                       onClick={() => {
                         setPaymentMethod('UPI');
                         setIsSplitMode(false);
                       }}
-                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
+                      className={`flex items-center justify-center gap-0.5 py-0.5 px-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer h-5.5 ${
                         paymentMethod === 'UPI' && !isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <Smartphone className="w-3 h-3 shrink-0" />
+                      <Smartphone className="w-2.5 h-2.5 shrink-0" />
                       <span>UPI</span>
                     </button>
 
-                    {/* Card */}
                     <button
                       type="button"
                       onClick={() => {
                         setPaymentMethod('Card');
                         setIsSplitMode(false);
                       }}
-                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
+                      className={`flex items-center justify-center gap-0.5 py-0.5 px-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer h-5.5 ${
                         paymentMethod === 'Card' && !isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <CreditCard className="w-3 h-3 shrink-0" />
+                      <CreditCard className="w-2.5 h-2.5 shrink-0" />
                       <span>Card</span>
                     </button>
 
-                    {/* Split */}
                     <button
                       type="button"
                       onClick={() => {
                         setIsSplitMode(true);
                       }}
-                      className={`flex items-center justify-center gap-1 py-0.5 px-1 rounded text-[10px] font-semibold transition-all cursor-pointer h-6 ${
+                      className={`flex items-center justify-center gap-0.5 py-0.5 px-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer h-5.5 ${
                         isSplitMode
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
-                      <Layers className="w-3 h-3 shrink-0" />
+                      <Layers className="w-2.5 h-2.5 shrink-0" />
                       <span>Split</span>
                     </button>
                   </div>
 
                   {/* Single-row Payment Status Strip */}
-                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-[10px]">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[9px]">
+                    <div className="flex items-center gap-0.5">
                       <span className="text-slate-500 font-medium">Paid:</span>
                       <span className="font-mono font-bold text-emerald-600">
-                        ₹{(calculatedBill.paidAmount ?? 0).toFixed(2)}
+                        ₹{(calculatedBill.paidAmount ?? 0).toFixed(0)}
                       </span>
                     </div>
-                    <div className="h-3 w-[1px] bg-slate-200" />
-                    <div className="flex items-center gap-1">
-                      <span className="text-slate-500 font-medium">Balance:</span>
+                    <div className="h-2.5 w-[1px] bg-slate-200" />
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-slate-500 font-medium">Bal:</span>
                       <span className="font-mono font-bold text-amber-600">
-                        ₹{(calculatedBill.balanceDue ?? 0).toFixed(2)}
+                        ₹{(calculatedBill.balanceDue ?? 0).toFixed(0)}
                       </span>
                     </div>
-                    <div className="h-3 w-[1px] bg-slate-200" />
-                    <div className="flex items-center gap-1">
-                      <span className="text-slate-500 font-medium">Change:</span>
+                    <div className="h-2.5 w-[1px] bg-slate-200" />
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-slate-500 font-medium">Chg:</span>
                       <span className="font-mono font-bold text-emerald-600">
-                        ₹{(calculatedBill.cashChange ?? 0).toFixed(2)}
+                        ₹{(calculatedBill.cashChange ?? 0).toFixed(0)}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Column 3: TOTALS & CHECKOUT BUTTON (col-span-3) */}
-              <div className="lg:col-span-3 lg:border-l lg:border-slate-200 lg:pl-2.5 flex flex-col justify-between h-full">
-                <div className="bg-slate-50/80 border border-slate-200 rounded px-2 py-1 space-y-0.5">
-                  <div className="flex items-center justify-between text-[10px] text-slate-600">
-                    <span>Sub: <strong className="font-mono text-slate-800">₹{(calculatedBill.grossAmount - calculatedBill.itemDiscount).toFixed(2)}</strong></span>
+              {/* Column 3: TOTALS & ACTION BUTTONS (col-span-4) */}
+              <div className="col-span-4 border-l border-slate-200 pl-2 flex flex-col justify-between">
+                {/* Compact Totals Strip */}
+                <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded px-2 py-0.5">
+                  <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                    <span>Sub: <strong className="font-mono text-slate-800">₹{(calculatedBill.grossAmount - calculatedBill.itemDiscount).toFixed(0)}</strong></span>
                     <span className="flex items-center gap-0.5">
                       Disc:
                       <input
@@ -1741,86 +1741,77 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         value={billDiscount || ''}
                         onChange={(e) => setBillDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
                         placeholder="0"
-                        className="w-12 px-1 py-0 bg-white border border-slate-200 rounded text-center font-mono text-[10px] text-slate-800 focus:border-blue-500 focus:outline-none h-4"
+                        className="w-10 px-1 py-0 bg-white border border-slate-200 rounded text-center font-mono text-[9px] text-slate-800 focus:border-blue-500 focus:outline-none h-4"
                       />
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-0.5 border-t border-slate-200">
-                    <span className="font-bold text-slate-900 text-xs">TOTAL:</span>
-                    <span className="font-extrabold text-blue-600 text-base font-mono">
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-slate-900 text-[11px]">TOTAL:</span>
+                    <span className="font-extrabold text-blue-600 text-sm font-mono">
                       ₹{calculatedBill.grandTotal.toFixed(2)}
                     </span>
                   </div>
                 </div>
 
-                {/* Paper Format Selector Bar */}
-                <div className="flex items-center justify-between mt-1 px-1 py-0.5 bg-slate-100 rounded border border-slate-200 text-[10px]">
-                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                    <Printer className="w-3 h-3 text-blue-600" />
-                    Paper:
-                  </span>
+                {/* 1 Unified Row: Format selector + A4 Button + Thermal Button */}
+                <div className="flex items-center gap-1 mt-1">
                   <select
                     value={printFormat}
                     onChange={(e) => handleUpdatePrintFormat(e.target.value as PrintPaperFormat)}
-                    className="bg-white border border-slate-300 rounded px-1.5 py-0.5 font-bold text-slate-800 text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    className="w-[32%] bg-white border border-slate-300 rounded px-1 py-1 font-semibold text-slate-700 text-[9px] focus:outline-none cursor-pointer h-7 truncate"
+                    title="Print Paper Format"
                   >
-                    <option value="a4">📄 A4 Full Sheet (210×297mm)</option>
-                    <option value="a5">📄 A5 Half Sheet (210×148mm)</option>
-                    <option value="a4-dual">📄 A4 Dual Half (2 Copies)</option>
-                    <option value="thermal-4inch">🧾 4" Thermal (104mm)</option>
-                    <option value="thermal-3inch">🧾 3" Thermal (80mm)</option>
-                    <option value="thermal-2inch">🧾 2" Thermal (58mm)</option>
+                    <option value="a4">📄 A4 Tax Invoice</option>
+                    <option value="thermal-3inch">🧾 3" Thermal</option>
+                    <option value="thermal-4inch">🧾 4" Thermal</option>
+                    <option value="thermal-2inch">🧾 2" Thermal</option>
+                    <option value="a5">📄 A5 Half Sheet</option>
+                    <option value="a4-dual">📄 A4 Dual Copy</option>
                   </select>
-                </div>
 
-                {/* Checkout & Print (F9) button */}
-                <button
-                  type="button"
-                  onClick={handleCheckoutF9}
-                  disabled={cartItems.length === 0}
-                  title={`F9 - Instant Print (${
-                    printFormat === 'a4'
-                      ? 'A4 Full Sheet'
-                      : printFormat === 'a5'
-                      ? 'A5 Half Sheet'
-                      : printFormat === 'a4-dual'
-                      ? 'A4 Dual Half-Sheet'
-                      : printFormat === 'thermal-3inch'
-                      ? '3" Thermal Receipt'
-                      : printFormat === 'thermal-2inch'
-                      ? '2" Thermal Receipt'
-                      : '4" Thermal Receipt'
-                  })`}
-                  className={`w-full py-1.5 mt-1 rounded font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none h-9 ${
-                    cartItems.length === 0
-                      ? 'bg-[#b0bec5] text-white cursor-not-allowed opacity-80'
-                      : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-md active:scale-[0.99]'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 leading-none">
-                    <Printer className="w-4 h-4" />
-                    <span className="text-sm font-extrabold tracking-wide">Checkout & Print (F9)</span>
-                  </div>
-                  <span className="text-[9px] font-medium text-emerald-100 opacity-95 leading-tight">
-                    {printFormat === 'a4'
-                      ? 'A4 Full Page GST Invoice · 1-Click Print'
-                      : printFormat === 'a5'
-                      ? 'A5 Half Sheet (அரை தாள்) · 1-Click Print'
-                      : printFormat === 'a4-dual'
-                      ? 'A4 Dual Copy (2 Invoices / 1 Page) · 1-Click'
-                      : printFormat === 'thermal-3inch'
-                      ? '3" (80mm) Thermal Receipt · 1-Click Print'
-                      : printFormat === 'thermal-2inch'
-                      ? '2" (58mm) Thermal Receipt · 1-Click Print'
-                      : '4" (104mm) Thermal Receipt · 1-Click Print'}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={cartItems.length === 0}
+                    onClick={() => {
+                      handleUpdatePrintFormat('a4');
+                      handleFinalizeBill('a4', true);
+                    }}
+                    className={`flex-1 py-1 px-1.5 rounded font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer h-7 shadow-2xs ${
+                      cartItems.length === 0
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white'
+                    }`}
+                    title="Checkout & Print A4 Tax Invoice (Image 1 Format · No Bank Details) - F9"
+                  >
+                    <span>📄</span>
+                    <span className="truncate">Print A4 (F9)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={cartItems.length === 0}
+                    onClick={() => {
+                      handleUpdatePrintFormat('thermal-3inch');
+                      handleFinalizeBill('thermal-3inch', true);
+                    }}
+                    className={`w-[28%] py-1 px-1 rounded font-bold text-[10px] flex items-center justify-center gap-1 border transition-colors cursor-pointer h-7 ${
+                      cartItems.length === 0
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                        : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                    }`}
+                    title="Checkout & Print 3-Inch Thermal Receipt"
+                  >
+                    <span>🧾</span>
+                    <span>Thermal</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
 
       {/* ========================================================= */}
       {/* TAB 2: BILL HISTORY & SALES INVOICES REGISTER (F6)        */}
@@ -2100,24 +2091,25 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                           </button>
                           <button
                             onClick={() => {
-                              setPrintFormat('thermal-4inch');
+                              handleUpdatePrintFormat('a4');
                               setPrintModalInvoice(inv);
                             }}
-                            title="Reprint 4-inch Thermal Receipt (Default)"
-                            className="p-1 text-slate-600 hover:text-emerald-700 rounded hover:bg-slate-100"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPrintFormat('a4');
-                              setPrintModalInvoice(inv);
-                            }}
-                            title="Print / View A4 Tax Invoice"
-                            className="p-1 text-slate-600 hover:text-indigo-700 rounded hover:bg-slate-100"
+                            title="Print A4 Tax Invoice (Image 1 Format · No Bank Details)"
+                            className="p-1 text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-200"
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </button>
+                          <button
+                            onClick={() => {
+                              handleUpdatePrintFormat('thermal-3inch');
+                              setPrintModalInvoice(inv);
+                            }}
+                            title="Print Thermal POS Receipt (80mm / 104mm)"
+                            className="p-1 text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+
                           {inv.status === 'Confirmed' && (
                             <button
                               onClick={() => {
@@ -2500,17 +2492,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   visibility: visible !important;
                 }
                 #printable-thermal,
-                #printable-thermal * {
-                  visibility: visible !important;
-                }
+                #printable-thermal *,
                 #printable-a4,
-                #printable-a4 * {
-                  visibility: visible !important;
-                }
+                #printable-a4 *,
+                .a4-dot-matrix-root,
+                .a4-dot-matrix-root *,
                 #printable-a5,
-                #printable-a5 * {
-                  visibility: visible !important;
-                }
+                #printable-a5 *,
                 #printable-a4-dual,
                 #printable-a4-dual * {
                   visibility: visible !important;
@@ -2539,20 +2527,18 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   left: auto !important;
                   top: auto !important;
                   width: 100% !important;
-                  max-width: 198mm !important;
-                  min-height: 272mm !important;
+                  max-width: 210mm !important;
                   margin: 0 auto !important;
-                  padding: 5mm 7mm !important;
-                  border: 1px solid #000000 !important;
+                  padding: 0mm !important;
+                  border: none !important;
                   box-shadow: none !important;
                   background: #ffffff !important;
                   color: #000000 !important;
                   overflow: visible !important;
-                  display: flex !important;
-                  flex-direction: column !important;
-                  justify-content: space-between !important;
+                  display: block !important;
                   box-sizing: border-box !important;
                 }
+
                 #printable-a5 {
                   position: relative !important;
                   left: auto !important;
@@ -2595,12 +2581,12 @@ export const PosBilling: React.FC<PosBillingProps> = ({
               className={`print-modal-card bg-white rounded-lg shadow-2xl ${modalMaxWidth} w-full max-h-[92vh] flex flex-col overflow-hidden transition-all duration-200`}
             >
               {/* Modal Header */}
-              <div className="print-modal-header p-3 bg-[#1e395b] text-white flex justify-between items-center shrink-0">
+              <div className="print-modal-header p-3 bg-[#1e395b] text-white flex flex-wrap justify-between items-center gap-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <Printer className="w-4 h-4 text-emerald-400" />
                   <span className="font-bold text-sm">
                     {printFormat === 'a4'
-                      ? 'Standard A4 GST Tax Invoice (210×297mm)'
+                      ? 'A4 Dot-Matrix Tax Invoice (Image 1 Format · No Bank Details)'
                       : printFormat === 'a5'
                       ? 'A5 Half Sheet Invoice (210×148mm - அரை தாள்)'
                       : printFormat === 'a4-dual'
@@ -2615,40 +2601,79 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     {printModalInvoice.invoiceNumber}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Quick Format Pills */}
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePrintFormat('a4')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                      printFormat === 'a4'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                    }`}
+                  >
+                    📄 A4 Tax Invoice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePrintFormat('thermal-3inch')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                      printFormat === 'thermal-3inch'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                    }`}
+                  >
+                    🧾 3" Thermal (80mm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePrintFormat('thermal-4inch')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                      printFormat === 'thermal-4inch'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                    }`}
+                  >
+                    🧾 4" Thermal (104mm)
+                  </button>
+
                   <select
                     value={printFormat}
                     onChange={(e) => handleUpdatePrintFormat(e.target.value as PrintPaperFormat)}
-                    className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded px-2.5 py-1 text-xs font-semibold focus:outline-none cursor-pointer"
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded px-2 py-1 text-xs font-semibold focus:outline-none cursor-pointer"
                   >
                     <option value="a4" className="text-slate-900 font-medium">
-                      📄 A4 Full Sheet (210×297mm - முழு தாள்)
-                    </option>
-                    <option value="a5" className="text-slate-900 font-medium">
-                      📄 A5 Half Sheet (210×148mm - அரை தாள் / Half Page)
-                    </option>
-                    <option value="a4-dual" className="text-slate-900 font-medium">
-                      📄 A4 Dual Half (2 Copies on 1 Sheet - Original+Duplicate)
-                    </option>
-                    <option value="thermal-4inch" className="text-slate-900 font-medium">
-                      🧾 4-Inch Thermal (104mm POS Roll)
+                      📄 A4 Sheet Tax Invoice (Image 1 Dot-Matrix - No Bank Details)
                     </option>
                     <option value="thermal-3inch" className="text-slate-900 font-medium">
                       🧾 3-Inch Thermal (80mm POS Roll)
                     </option>
+                    <option value="thermal-4inch" className="text-slate-900 font-medium">
+                      🧾 4-Inch Thermal (104mm POS Roll)
+                    </option>
                     <option value="thermal-2inch" className="text-slate-900 font-medium">
                       🧾 2-Inch Thermal (58mm Portable Roll)
                     </option>
+                    <option value="a5" className="text-slate-900 font-medium">
+                      📄 A5 Half Sheet (210×148mm - அரை தாள்)
+                    </option>
+                    <option value="a4-dual" className="text-slate-900 font-medium">
+                      📄 A4 Dual Half (2 Copies on 1 Sheet)
+                    </option>
                   </select>
+
                   <button
                     type="button"
                     onClick={() => setPrintModalInvoice(null)}
-                    className="p-1 hover:bg-white/20 rounded text-white cursor-pointer"
+                    className="p-1 hover:bg-white/20 rounded text-white cursor-pointer ml-1"
+                    title="Close preview (Esc)"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
+
 
               {/* Modal Document Body */}
               <div className="print-modal-body flex-1 overflow-y-auto p-4 bg-slate-100 flex justify-center">
@@ -2870,174 +2895,20 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   </div>
                 ) : (
                   /* ======================================================== */
-                  /* A4 Full Sheet GST Tax Invoice Preview (210mm x 297mm)     */
+                  /* A4 Dot-Matrix Tax Invoice (Image 1 Format, No Bank Details) */
                   /* ======================================================== */
                   <div
                     id="printable-a4"
-                    className="w-full max-w-4xl bg-white p-6 sm:p-8 shadow-md border border-slate-300 text-black text-xs leading-normal select-text min-h-[268mm] flex flex-col justify-between"
+                    className="w-full max-w-[215mm] bg-white p-2 sm:p-4 shadow-md border border-slate-300 overflow-x-auto"
                   >
-                    <div className="border border-black p-5 flex flex-col justify-between h-full min-h-[255mm] space-y-4">
-                      <div className="space-y-4">
-                        {/* Header */}
-                        <div className="text-center pb-3 border-b border-black">
-                          <div className="font-black text-lg tracking-wider uppercase text-black">
-                            {hasGst ? 'TAX INVOICE' : 'ESTIMATE / CASH BILL'}
-                          </div>
-                          <div className="text-[10px] text-slate-600 uppercase font-bold tracking-wide">
-                            {hasGst ? 'ORIGINAL FOR RECIPIENT' : 'CUSTOMER COPY'}
-                          </div>
-                          <div className="mt-2">
-                            <div className="font-black text-xl uppercase tracking-wider text-black">
-                              {storeSettings.storeName || 'SRI VENKATESWARA TRADERS'}
-                            </div>
-                          </div>
-                          <div className="text-xs text-black font-semibold mt-1">
-                            மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில்
-                          </div>
-                          <div className="text-xs text-black font-bold">காஞ்சிபுரம் - 631 502.</div>
-                          <div className="text-xs font-bold text-black font-mono mt-1">
-                            Ph: 8143 84 8143 / 9941333457
-                          </div>
-                          <div className="text-xs font-extrabold text-black font-mono mt-0.5">
-                            GSTIN: {storeSettings.gstNumber || '33AAAAA0000A1Z5'}
-                          </div>
-                        </div>
-
-                        {/* Invoice & Buyer Info Grid */}
-                        <div className="grid grid-cols-2 gap-4 text-xs pb-3 border-b border-black">
-                          <div className="space-y-1">
-                            <div className="font-bold text-slate-900 uppercase">Invoice Details:</div>
-                            <div>
-                              Invoice No: <strong className="font-mono">{printModalInvoice.invoiceNumber}</strong>
-                            </div>
-                            <div>
-                              Date: {new Date(printModalInvoice.invoiceDate).toLocaleDateString('en-IN')}{' '}
-                              {new Date(printModalInvoice.invoiceDate).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </div>
-                            <div>
-                              Place of Supply: {printModalInvoice.isInterstate ? 'Inter-state' : 'Tamil Nadu (33)'}
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="font-bold text-slate-900 uppercase">Billed To (Buyer):</div>
-                            <div className="font-bold text-black">{printModalInvoice.customerName}</div>
-                            <div>Mobile: {printModalInvoice.customerMobile || '—'}</div>
-                            <div>GSTIN: {printModalInvoice.customerGstin || 'Unregistered Consumer'}</div>
-                          </div>
-                        </div>
-
-                        {/* Items Table */}
-                        <table className="w-full text-left text-xs border border-black border-collapse">
-                          <thead className="bg-slate-100 border-b border-black font-bold">
-                            <tr>
-                              <th className="p-1.5 border-r border-black w-8 text-center">#</th>
-                              <th className="p-1.5 border-r border-black">Item Description</th>
-                              <th className="p-1.5 border-r border-black w-24 text-center">HSN/SKU</th>
-                              <th className="p-1.5 border-r border-black w-16 text-center">Qty</th>
-                              <th className="p-1.5 border-r border-black w-20 text-right">MRP ₹</th>
-                              <th className="p-1.5 border-r border-black w-20 text-right">Rate ₹</th>
-                              <th className="p-1.5 border-r border-black w-22 text-right">Taxable ₹</th>
-                              <th className="p-1.5 border-r border-black w-16 text-center">GST %</th>
-                              <th className="p-1.5 text-right w-24">Total ₹</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-black">
-                            {printModalInvoice.items.map((it, idx) => (
-                              <tr key={idx} className="align-middle">
-                                <td className="p-1.5 border-r border-black text-center">{idx + 1}</td>
-                                <td className="p-1.5 border-r border-black font-bold text-black">{it.productName}</td>
-                                <td className="p-1.5 border-r border-black text-center font-mono">{it.productCode}</td>
-                                <td className="p-1.5 border-r border-black text-center font-mono font-semibold">
-                                  {it.quantity} {it.unit}
-                                </td>
-                                <td className="p-1.5 border-r border-black text-right font-mono">
-                                  ₹{(it.mrp !== undefined ? it.mrp : it.rate).toFixed(2)}
-                                </td>
-                                <td className="p-1.5 border-r border-black text-right font-mono">
-                                  ₹{it.rate.toFixed(2)}
-                                </td>
-                                <td className="p-1.5 border-r border-black text-right font-mono">
-                                  ₹{it.taxableAmount.toFixed(2)}
-                                </td>
-                                <td className="p-1.5 border-r border-black text-center font-mono">{it.taxRate}%</td>
-                                <td className="p-1.5 text-right font-mono font-bold text-black">
-                                  ₹{it.lineTotal.toFixed(2)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Bottom Section: Totals, Declarations & Signatures */}
-                      <div className="space-y-4 pt-2">
-                        {/* Totals & Tax Breakup Grid */}
-                        <div className="grid grid-cols-2 gap-4 text-[11px] pt-1">
-                          <div className="space-y-1 text-[10px]">
-                            <div className="font-bold">Bank Details:</div>
-                            <div>Bank: State Bank of India</div>
-                            <div>A/c No: 33440011223344</div>
-                            <div>IFSC: SBIN0001234</div>
-                            <div className="pt-2 font-bold">Declaration:</div>
-                            <div className="text-[9px] text-slate-600">
-                              We declare that this invoice shows actual price of the goods described and all particulars
-                              are true and correct.
-                            </div>
-                          </div>
-
-                          <div className="space-y-1 text-right">
-                            <div className="flex justify-between">
-                              <span>Taxable Value:</span>
-                              <span className="font-mono">₹{printModalInvoice.taxableAmount.toFixed(2)}</span>
-                            </div>
-                            {!printModalInvoice.isInterstate ? (
-                              <>
-                                <div className="flex justify-between">
-                                  <span>Central Tax (CGST):</span>
-                                  <span className="font-mono">₹{printModalInvoice.cgstAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>State Tax (SGST):</span>
-                                  <span className="font-mono">₹{printModalInvoice.sgstAmount.toFixed(2)}</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex justify-between">
-                                <span>Integrated Tax (IGST):</span>
-                                <span className="font-mono">₹{printModalInvoice.igstAmount.toFixed(2)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span>Round Off:</span>
-                              <span className="font-mono">₹{printModalInvoice.roundOff.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between font-bold text-xs pt-1 border-t border-black">
-                              <span>Invoice Total:</span>
-                              <span className="font-mono text-base">₹{printModalInvoice.grandTotal.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Signatory Footer */}
-                        <div className="pt-6 flex justify-between items-end border-t border-black text-[10px]">
-                          <div>Customer Signature</div>
-                          <div className="text-right">
-                            <div className="font-semibold">
-                              For {storeSettings.storeName || 'SRI VENKATESWARA (SVT)'}
-                            </div>
-                            <div className="h-8"></div>
-                            <div className="border-t border-dotted border-black inline-block px-4">
-                              Authorized Signatory
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <A4DotMatrixInvoice
+                      invoice={printModalInvoice}
+                      settings={storeSettings}
+                      copyTitle="Original for Receipient"
+                    />
                   </div>
                 )}
+
               </div>
 
               {/* Modal Actions */}
@@ -3055,13 +2926,37 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     ? '2-Inch Thermal (58mm Portable Roll)'
                     : '4-Inch Thermal POS Printer (104mm)'}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => setPrintModalInvoice(null)}
                     className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                   >
                     Close (Esc)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playScannerBeep('print');
+                      if (printFormat === 'a4') {
+                        printHtmlDirectly(
+                          generateA4DotMatrixHtml(printModalInvoice, storeSettings),
+                          `Tax_Invoice_${printModalInvoice.invoiceNumber}`
+                        );
+                      } else {
+                        const widthMm =
+                          printFormat === 'thermal-2inch' ? 58 : printFormat === 'thermal-4inch' ? 104 : 80;
+                        printHtmlDirectly(
+                          generateThermalReceiptHtml(printModalInvoice, storeSettings, widthMm),
+                          `Thermal_Receipt_${printModalInvoice.invoiceNumber}`
+                        );
+                      }
+                    }}
+                    className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] active:bg-blue-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+                    title="Direct Isolated Print (Bypasses browser iframe issues & prints cleanly)"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>🖨️ Direct Instant Print</span>
                   </button>
                   <button
                     type="button"
@@ -3075,7 +2970,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     <span>
                       Print{' '}
                       {printFormat === 'a4'
-                        ? 'A4 Invoice'
+                        ? 'A4 Tax Invoice'
                         : printFormat === 'a5'
                         ? 'A5 Half Sheet'
                         : printFormat === 'a4-dual'
@@ -3085,6 +2980,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     </span>
                   </button>
                 </div>
+
               </div>
             </div>
           </div>

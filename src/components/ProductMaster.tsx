@@ -499,8 +499,8 @@ export const ProductMaster: React.FC<ProductMasterProps> = ({
       </div>
 
       {/* 4. Product Data Grid - S.No, SGST, CGST, IGST, View/Edit/Delete Actions, No Overlap */}
-      <div className="flex-1 overflow-y-auto overflow-x-auto bg-white border-b border-slate-200">
-        <table className="w-full min-w-[1100px] table-fixed text-left border-separate border-spacing-0 text-xs">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white border-b border-slate-200">
+        <table className="w-full table-fixed text-left border-separate border-spacing-0 text-xs">
           <thead className="sticky top-0 z-20 select-none shadow-xs">
             <tr>
               <th className="sticky top-0 z-20 bg-[#1f4e79] text-white py-2 px-1 font-semibold border-b border-r border-[#153a5e] text-center w-[3.5%] min-w-[35px] truncate">S.No</th>
