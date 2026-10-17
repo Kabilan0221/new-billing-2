@@ -42,11 +42,12 @@ export function printHtmlDirectly(
         return;
       }
 
+      const isThermal = paperWidthMm <= 110;
       const pageCss =
         paperWidthMm === 210
           ? 'size: A4 portrait; margin: 4mm;'
           : paperWidthMm === 148
-          ? 'size: A5 landscape; margin: 3mm;'
+          ? 'size: 210mm 148mm; margin: 3mm;'
           : `size: ${paperWidthMm}mm auto; margin: 0mm;`;
 
       doc.open();
@@ -64,24 +65,31 @@ export function printHtmlDirectly(
                 box-sizing: border-box !important;
               }
               html, body {
-                width: 100% !important;
+                width: ${isThermal ? `${paperWidthMm}mm` : '100%'} !important;
+                max-width: ${isThermal ? `${paperWidthMm}mm` : '100%'} !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: 'Courier New', Courier, monospace, monospace;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, 'Courier New', monospace;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
+              table, tr, td, th, div, span, p {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
               @media screen {
                 body {
-                  padding: 8px;
+                  padding: 4px;
                 }
               }
               @media print {
-                body {
+                html, body {
                   margin: 0 !important;
                   padding: 0 !important;
+                  height: auto !important;
+                  overflow: visible !important;
                 }
               }
             </style>
@@ -106,9 +114,9 @@ export function printHtmlDirectly(
         } finally {
           setTimeout(() => {
             iframe.remove();
-          }, 3500);
+          }, 4000);
         }
-      }, 250);
+      }, 200);
     } catch (e) {
       console.error('Print service exception:', e);
       window.print();

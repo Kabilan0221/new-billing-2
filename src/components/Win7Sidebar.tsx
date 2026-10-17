@@ -38,7 +38,7 @@ export const SIDEBAR_ITEMS: NavItem[] = [
   { id: 8, key: 'customers', label: 'Customers', shortcut: 'F7', icon: Users, isPhase1Active: true },
   { id: 9, key: 'suppliers', label: 'Suppliers', icon: Building, isPhase1Active: true },
   { id: 10, key: 'stock', label: 'Stock', shortcut: 'F8', icon: Layers, isPhase1Active: true },
-  { id: 11, key: 'invoices', label: 'Estimates & Invoices', shortcut: 'F9', icon: FileSpreadsheet, isPhase1Active: true },
+  { id: 11, key: 'invoices', label: 'Estimates & Invoices', shortcut: 'F11', icon: FileSpreadsheet, isPhase1Active: true },
   { id: 12, key: 'reports', label: 'Reports', shortcut: 'F10', icon: BarChart3, isPhase1Active: true },
   { id: 13, key: 'data', label: 'Data Management', icon: Database, isPhase1Active: true },
   { id: 14, key: 'settings', label: 'Settings', icon: Settings, isPhase1Active: true },

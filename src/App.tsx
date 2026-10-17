@@ -87,14 +87,17 @@ export default function App() {
         setActiveNav('stock');
       } else if (e.key === 'F9') {
         if (activeNav === 'pos') {
-          // Allow PosBilling component to handle F9 direct 4-inch thermal checkout & print
+          // Allow PosBilling component to handle F9 direct thermal checkout & print
           return;
         }
         e.preventDefault();
-        setActiveNav('invoices');
+        setActiveNav('pos');
       } else if (e.key === 'F10') {
         e.preventDefault();
         setActiveNav('reports');
+      } else if (e.key === 'F11') {
+        e.preventDefault();
+        setActiveNav('invoices');
       } else if (e.key === 'Escape') {
         setIsProductDialogOpen(false);
         setIsCategoryDialogOpen(false);

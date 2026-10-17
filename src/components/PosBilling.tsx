@@ -142,7 +142,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     if (pref.includes('80mm') || pref.includes('3-Inch')) return 'thermal-3inch';
     if (pref.includes('58mm') || pref.includes('2-Inch')) return 'thermal-2inch';
     if (pref.includes('104mm') || pref.includes('4-Inch')) return 'thermal-4inch';
-    return 'a4';
+    return 'thermal-3inch';
   });
 
   const handleUpdatePrintFormat = (fmt: PrintPaperFormat) => {
@@ -618,8 +618,10 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     }
   }, [calculatedBill.grandTotal, isSplitMode]);
 
-  // Camera video stream lifecycle
+  // Camera video stream lifecycle & active real-time BarcodeDetector frame scanner
   useEffect(() => {
+    let scanInterval: any = null;
+
     if (isCameraOpen) {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
@@ -629,6 +631,28 @@ export const PosBilling: React.FC<PosBillingProps> = ({
             if (videoRef.current) {
               videoRef.current.srcObject = stream;
               videoRef.current.play().catch(() => {});
+
+              // If browser supports BarcodeDetector, continuously scan frames
+              if ('BarcodeDetector' in window) {
+                try {
+                  const detector = new (window as any).BarcodeDetector({
+                    formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'qr_code', 'upc_a', 'upc_e'],
+                  });
+
+                  scanInterval = setInterval(async () => {
+                    if (videoRef.current && videoRef.current.readyState >= 2) {
+                      try {
+                        const barcodes = await detector.detect(videoRef.current);
+                        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                          handleCameraScanItem(barcodes[0].rawValue);
+                        }
+                      } catch (err) {}
+                    }
+                  }, 300);
+                } catch (e) {
+                  console.warn('BarcodeDetector initialization skipped:', e);
+                }
+              }
             }
           })
           .catch((err) => {
@@ -636,12 +660,15 @@ export const PosBilling: React.FC<PosBillingProps> = ({
           });
       }
     } else {
+      if (scanInterval) clearInterval(scanInterval);
       if (cameraStreamRef.current) {
         cameraStreamRef.current.getTracks().forEach((t) => t.stop());
         cameraStreamRef.current = null;
       }
     }
+
     return () => {
+      if (scanInterval) clearInterval(scanInterval);
       if (cameraStreamRef.current) {
         cameraStreamRef.current.getTracks().forEach((t) => t.stop());
         cameraStreamRef.current = null;
@@ -649,16 +676,87 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     };
   }, [isCameraOpen]);
 
-  // F9 Quick key listener (F9 click / press panna direct thermal print akunum)
+  // Hardware USB Barcode Scanner & Quick key listener (F9 direct thermal print, Enter, Escape)
   useEffect(() => {
+    let scanBuffer = '';
+    let lastKeyTime = 0;
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      const now = performance.now();
+      const timeDiff = now - lastKeyTime;
+      lastKeyTime = now;
+
+      // Reset buffer if human typing (> 80ms gap)
+      if (timeDiff > 80) {
+        scanBuffer = '';
+      }
+
+      // Check if Enter received from a rapid USB barcode scanner gun
+      if (e.key === 'Enter') {
+        const scannedCode = scanBuffer.trim();
+        scanBuffer = '';
+
+        if (scannedCode.length >= 3 && !printModalInvoice) {
+          // Hardware barcode gun scanned code!
+          e.preventDefault();
+          e.stopPropagation();
+
+          const found =
+            db.getProductByBarcode(scannedCode) ||
+            allProducts.find((p) => p.barcode.toLowerCase() === scannedCode.toLowerCase()) ||
+            allProducts.find((p) => p.productCode.toLowerCase() === scannedCode.toLowerCase());
+
+          if (found) {
+            addItemToCart(found, 1);
+            setSearchTerm('');
+            setScanBarcode('');
+            setIsSearchOpen(false);
+          } else {
+            playScannerBeep('error');
+            setAlertMessage({
+              type: 'warning',
+              text: `Scanned barcode "${scannedCode}" was not found in catalog.`,
+            });
+            setTimeout(() => setAlertMessage(null), 3500);
+          }
+          return;
+        }
+      }
+
+      // Buffer printable characters for barcode scanner gun
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const activeTag = document.activeElement?.tagName;
+        const isOtherInput =
+          (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') &&
+          document.activeElement !== barcodeInputRef.current;
+
+        // If in another input, only buffer if rapid bursts (< 45ms)
+        if (!isOtherInput || timeDiff < 45) {
+          scanBuffer += e.key;
+        }
+      }
+
+      // F9 Quick key listener (triggers direct thermal print)
       if (e.key === 'F9') {
         e.preventDefault();
         e.stopPropagation();
         if (printModalInvoice) {
-          // If modal is open, F9 prints immediately
           playScannerBeep('print');
-          window.print();
+          if (printFormat.startsWith('thermal')) {
+            const widthMm =
+              printFormat === 'thermal-2inch' ? 58 : printFormat === 'thermal-4inch' ? 104 : 80;
+            printHtmlDirectly(
+              generateThermalReceiptHtml(printModalInvoice, storeSettings, widthMm),
+              `Thermal_Receipt_${printModalInvoice.invoiceNumber}`,
+              widthMm
+            );
+          } else {
+            printHtmlDirectly(
+              generateA4DotMatrixHtml(printModalInvoice, storeSettings),
+              `Tax_Invoice_${printModalInvoice.invoiceNumber}`,
+              210
+            );
+          }
           return;
         }
         if (cartItems.length === 0) {
@@ -668,15 +766,31 @@ export const PosBilling: React.FC<PosBillingProps> = ({
           return;
         }
 
-        // F9 click / press -> Direct 4-inch Thermal Print!
-        handleFinalizeBill(printFormat, true);
+        // F9 direct thermal checkout & print
+        const thermalFmt = printFormat.startsWith('thermal') ? printFormat : 'thermal-3inch';
+        handleFinalizeBill(thermalFmt, true);
       }
+
       if (e.key === 'Enter' && printModalInvoice) {
-        // Enter in print modal also triggers print
         e.preventDefault();
         playScannerBeep('print');
-        window.print();
+        if (printFormat.startsWith('thermal')) {
+          const widthMm =
+            printFormat === 'thermal-2inch' ? 58 : printFormat === 'thermal-4inch' ? 104 : 80;
+          printHtmlDirectly(
+            generateThermalReceiptHtml(printModalInvoice, storeSettings, widthMm),
+            `Thermal_Receipt_${printModalInvoice.invoiceNumber}`,
+            widthMm
+          );
+        } else {
+          printHtmlDirectly(
+            generateA4DotMatrixHtml(printModalInvoice, storeSettings),
+            `Tax_Invoice_${printModalInvoice.invoiceNumber}`,
+            210
+          );
+        }
       }
+
       if (e.key === 'Escape') {
         if (printModalInvoice) {
           setPrintModalInvoice(null);
@@ -689,6 +803,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
         }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
@@ -713,7 +828,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     isQuickAddOpen,
   ]);
 
-  // Checkout F9 handler (Single click or F9 key triggers direct 4-inch thermal print)
+  // Checkout F9 handler (Single click or F9 key triggers direct thermal print)
   const handleCheckoutF9 = () => {
     if (cartItems.length === 0) {
       playScannerBeep('error');
@@ -721,8 +836,9 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       setTimeout(() => setAlertMessage(null), 2500);
       return;
     }
-    // Direct 4-inch thermal print
-    handleFinalizeBill(printFormat, true);
+    // Direct thermal print
+    const thermalFmt = printFormat.startsWith('thermal') ? printFormat : 'thermal-3inch';
+    handleFinalizeBill(thermalFmt, true);
   };
 
   // -------------------------------------------------------------
@@ -1004,11 +1120,22 @@ export const PosBilling: React.FC<PosBillingProps> = ({
     handleUpdatePrintFormat(format);
     setPrintModalInvoice(savedInvoice);
 
-    // If autoPrint requested (e.g. F9 click / press), immediately trigger 4-inch thermal print dialog
+    // If autoPrint requested (e.g. F9 click / press), immediately trigger direct isolated thermal print
     if (autoPrint) {
-      setTimeout(() => {
-        window.print();
-      }, 180);
+      if (format.startsWith('thermal')) {
+        const widthMm = format === 'thermal-2inch' ? 58 : format === 'thermal-4inch' ? 104 : 80;
+        printHtmlDirectly(
+          generateThermalReceiptHtml(savedInvoice, storeSettings, widthMm),
+          `Thermal_Receipt_${savedInvoice.invoiceNumber}`,
+          widthMm
+        );
+      } else {
+        printHtmlDirectly(
+          generateA4DotMatrixHtml(savedInvoice, storeSettings),
+          `Tax_Invoice_${savedInvoice.invoiceNumber}`,
+          210
+        );
+      }
     }
 
     // Reload catalog & history
@@ -1754,18 +1881,18 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   </div>
                 </div>
 
-                {/* 1 Unified Row: Format selector + A4 Button + Thermal Button */}
+                {/* 1 Unified Row: Format selector + Thermal Button (F9) + A4 Button */}
                 <div className="flex items-center gap-1 mt-1">
                   <select
                     value={printFormat}
                     onChange={(e) => handleUpdatePrintFormat(e.target.value as PrintPaperFormat)}
-                    className="w-[32%] bg-white border border-slate-300 rounded px-1 py-1 font-semibold text-slate-700 text-[9px] focus:outline-none cursor-pointer h-7 truncate"
+                    className="w-[30%] bg-white border border-slate-300 rounded px-1 py-1 font-semibold text-slate-700 text-[9px] focus:outline-none cursor-pointer h-7 truncate"
                     title="Print Paper Format"
                   >
+                    <option value="thermal-3inch">🧾 3" Thermal (80mm)</option>
+                    <option value="thermal-4inch">🧾 4" Thermal (104mm)</option>
+                    <option value="thermal-2inch">🧾 2" Thermal (58mm)</option>
                     <option value="a4">📄 A4 Tax Invoice</option>
-                    <option value="thermal-3inch">🧾 3" Thermal</option>
-                    <option value="thermal-4inch">🧾 4" Thermal</option>
-                    <option value="thermal-2inch">🧾 2" Thermal</option>
                     <option value="a5">📄 A5 Half Sheet</option>
                     <option value="a4-dual">📄 A4 Dual Copy</option>
                   </select>
@@ -1774,36 +1901,37 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     type="button"
                     disabled={cartItems.length === 0}
                     onClick={() => {
-                      handleUpdatePrintFormat('a4');
-                      handleFinalizeBill('a4', true);
+                      const thermalFmt = printFormat.startsWith('thermal') ? printFormat : 'thermal-3inch';
+                      handleUpdatePrintFormat(thermalFmt);
+                      handleFinalizeBill(thermalFmt, true);
                     }}
                     className={`flex-1 py-1 px-1.5 rounded font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer h-7 shadow-2xs ${
                       cartItems.length === 0
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white'
                     }`}
-                    title="Checkout & Print A4 Tax Invoice (Image 1 Format · No Bank Details) - F9"
+                    title="Checkout & Print Thermal POS Receipt - F9"
                   >
-                    <span>📄</span>
-                    <span className="truncate">Print A4 (F9)</span>
+                    <Printer className="w-3.5 h-3.5" />
+                    <span className="truncate">🧾 Print Thermal (F9)</span>
                   </button>
 
                   <button
                     type="button"
                     disabled={cartItems.length === 0}
                     onClick={() => {
-                      handleUpdatePrintFormat('thermal-3inch');
-                      handleFinalizeBill('thermal-3inch', true);
+                      handleUpdatePrintFormat('a4');
+                      handleFinalizeBill('a4', true);
                     }}
-                    className={`w-[28%] py-1 px-1 rounded font-bold text-[10px] flex items-center justify-center gap-1 border transition-colors cursor-pointer h-7 ${
+                    className={`w-[26%] py-1 px-1 rounded font-bold text-[10px] flex items-center justify-center gap-1 border transition-colors cursor-pointer h-7 ${
                       cartItems.length === 0
                         ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                        : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-300'
                     }`}
-                    title="Checkout & Print 3-Inch Thermal Receipt"
+                    title="Checkout & Print A4 Tax Invoice (Laser / Inkjet)"
                   >
-                    <span>🧾</span>
-                    <span>Thermal</span>
+                    <FileText className="w-3 h-3 text-blue-600" />
+                    <span className="truncate">📄 Print A4</span>
                   </button>
                 </div>
               </div>
@@ -2938,33 +3066,23 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     type="button"
                     onClick={() => {
                       playScannerBeep('print');
-                      if (printFormat === 'a4') {
-                        printHtmlDirectly(
-                          generateA4DotMatrixHtml(printModalInvoice, storeSettings),
-                          `Tax_Invoice_${printModalInvoice.invoiceNumber}`
-                        );
-                      } else {
+                      if (printFormat.startsWith('thermal')) {
                         const widthMm =
                           printFormat === 'thermal-2inch' ? 58 : printFormat === 'thermal-4inch' ? 104 : 80;
                         printHtmlDirectly(
                           generateThermalReceiptHtml(printModalInvoice, storeSettings, widthMm),
-                          `Thermal_Receipt_${printModalInvoice.invoiceNumber}`
+                          `Thermal_Receipt_${printModalInvoice.invoiceNumber}`,
+                          widthMm
+                        );
+                      } else {
+                        printHtmlDirectly(
+                          generateA4DotMatrixHtml(printModalInvoice, storeSettings),
+                          `Tax_Invoice_${printModalInvoice.invoiceNumber}`,
+                          210
                         );
                       }
                     }}
-                    className="px-4 py-1.5 bg-[#106ebe] hover:bg-[#005a9e] active:bg-blue-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
-                    title="Direct Isolated Print (Bypasses browser iframe issues & prints cleanly)"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>🖨️ Direct Instant Print</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playScannerBeep('print');
-                      window.print();
-                    }}
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>

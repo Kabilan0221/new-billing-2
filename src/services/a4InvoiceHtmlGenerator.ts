@@ -223,7 +223,7 @@ export function generateA4DotMatrixHtml(invoice: InvoiceHeader, settings?: AppSe
   `;
 }
 
-export function generateThermalReceiptHtml(invoice: InvoiceHeader, settings?: AppSettings, paperWidthMm = 104): string {
+export function generateThermalReceiptHtml(invoice: InvoiceHeader, settings?: AppSettings, paperWidthMm = 80): string {
   const storeName = settings?.storeName || 'Sri Venkateswara (SVT)';
   const storeTamil = settings?.storeTamilName || '';
   const storeSubtitle = settings?.storeSubtitle || '';

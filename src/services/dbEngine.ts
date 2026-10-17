@@ -978,13 +978,64 @@ class SQLiteIndexedEngine {
     return true;
   }
 
-  public bulkImportProducts(newItems: Partial<Product>[], updateDuplicates: boolean = false): { imported: number; failed: number; errors: any[] } {
+  public removeAllProducts(): number {
+    const count = this.products.length;
+    this.products = [];
+    this.barcodeIndex.clear();
+    this.codeIndex.clear();
+    this.idIndex.clear();
+    this.categoryIndex.clear();
+    this.brandIndex.clear();
+    this.currentNextId = 1;
+    this.logAudit('Product', 'ALL', 'DELETE' as any, `Cleared all ${count} existing products before bulk import`);
+    if (!this.isInitializing) this.saveToLocalStorage();
+    return count;
+  }
+
+  public bulkImportProducts(
+    newItems: Partial<Product>[],
+    updateDuplicates: boolean = false,
+    clearExisting: boolean = false
+  ): { imported: number; failed: number; errors: any[]; clearedCount?: number } {
+    let clearedCount = 0;
+    if (clearExisting) {
+      clearedCount = this.removeAllProducts();
+    }
+
     let imported = 0;
     let failed = 0;
     const errors: any[] = [];
 
     for (let i = 0; i < newItems.length; i++) {
-      const row = newItems[i];
+      const row = { ...newItems[i] };
+
+      // Auto-assign product code if missing
+      if (!row.productCode || row.productCode.trim().length < 2) {
+        const nextSeq = this.products.length + imported + 1;
+        row.productCode = `PRD${nextSeq.toString().padStart(4, '0')}`;
+      }
+
+      // Auto-assign barcode if missing
+      if (!row.barcode || row.barcode.trim().length < 3) {
+        row.barcode = this.generateUniqueBarcode('A385');
+      }
+
+      // Ensure MRP is at least sale rate if missing
+      if (!row.mrp || row.mrp < (row.saleRate || 0)) {
+        row.mrp = row.saleRate || 0;
+      }
+
+      // If updateDuplicates is enabled, check if product already exists by barcode or productCode
+      if (updateDuplicates && !clearExisting) {
+        const cleanBc = row.barcode?.trim().toLowerCase();
+        const cleanCd = row.productCode?.trim().toLowerCase();
+        const existing = (cleanBc ? this.barcodeIndex.get(cleanBc) : undefined) ||
+                         (cleanCd ? this.codeIndex.get(cleanCd) : undefined);
+        if (existing) {
+          row.id = existing.id;
+        }
+      }
+
       const res = this.saveProduct(row);
       if (res.success) {
         imported++;
@@ -994,8 +1045,9 @@ class SQLiteIndexedEngine {
       }
     }
 
-    this.logAudit('Excel', 'BulkImport', 'IMPORT', `Imported ${imported} products with ${failed} failures.`);
-    return { imported, failed, errors };
+    this.logAudit('Excel', 'BulkImport', 'IMPORT', `Imported/Updated ${imported} products with ${failed} failures (cleared existing: ${clearedCount}).`);
+    if (!this.isInitializing) this.saveToLocalStorage();
+    return { imported, failed, errors, clearedCount };
   }
 
   public load50kBenchmarkDataset(): { durationMs: number; count: number } {
@@ -2854,6 +2906,60 @@ class SQLiteIndexedEngine {
     return { success: true };
   }
 
+  public deleteInvoice(invoiceId: number, revertStock: boolean = true): { success: boolean; errors: string[] } {
+    const idx = this.invoices.findIndex((i) => i.id === invoiceId);
+    if (idx === -1) return { success: false, errors: ['Invoice not found.'] };
+
+    const inv = this.invoices[idx];
+
+    // Revert stock if confirmed and requested
+    if (revertStock && inv.status === 'Confirmed') {
+      for (const it of inv.items) {
+        const prod = this.idIndex.get(it.productId);
+        if (prod) {
+          const before = prod.currentStock;
+          const after = before + it.quantity;
+          prod.currentStock = after;
+          prod.updatedAt = new Date().toISOString();
+
+          this.stockMovements.unshift({
+            id: this.nextMovementId++,
+            productId: prod.id,
+            productCode: prod.productCode,
+            productName: prod.nameEn,
+            referenceType: 'SALES_CANCEL',
+            referenceId: `DEL-${inv.invoiceNumber}`,
+            quantity: it.quantity,
+            quantityBefore: before,
+            quantityAfter: after,
+            notes: `Invoice #${inv.invoiceNumber} deleted: +${it.quantity} restored to stock`,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      if (inv.balanceDue > 0 && inv.customerId) {
+        const cust = this.customerIdIndex.get(inv.customerId);
+        if (cust) {
+          cust.currentBalance = Math.max(0, cust.currentBalance - inv.balanceDue);
+          cust.updatedAt = new Date().toISOString();
+        }
+      }
+    }
+
+    this.invoices.splice(idx, 1);
+    this.invoiceIdIndex.delete(invoiceId);
+    if (inv.invoiceNumber) {
+      this.invoiceNumberIndex.delete(inv.invoiceNumber.trim().toUpperCase());
+    }
+
+    this.rebuildIndexes();
+    this.logAudit('Invoice', inv.invoiceNumber, 'DELETE' as any, `Permanently deleted invoice #${inv.invoiceNumber}`);
+    if (!this.isInitializing) this.saveToLocalStorage();
+
+    return { success: true, errors: [] };
+  }
+
   public updateInvoice(updatedInv: Partial<InvoiceHeader> & { id: number }): { success: boolean; errors: string[]; invoice?: InvoiceHeader } {
     const existing = this.invoiceIdIndex.get(updatedInv.id);
     if (!existing) {
@@ -3360,6 +3466,24 @@ class SQLiteIndexedEngine {
     this.rebuildIndexes();
     this.logAudit('Estimate', est.estimateNumber, 'CANCEL', `Cancelled estimate #${est.estimateNumber}: ${reason}`);
     return { success: true, errors: [], estimate: est };
+  }
+
+  public deleteEstimate(id: number): { success: boolean; errors: string[] } {
+    const idx = this.estimates.findIndex((e) => e.id === id);
+    if (idx === -1) return { success: false, errors: ['Estimate not found.'] };
+
+    const est = this.estimates[idx];
+    this.estimates.splice(idx, 1);
+    this.estimateIdIndex.delete(id);
+    if (est.estimateNumber) {
+      this.estimateNumberIndex.delete(est.estimateNumber.trim().toUpperCase());
+    }
+
+    this.rebuildIndexes();
+    this.logAudit('Estimate', est.estimateNumber, 'DELETE' as any, `Permanently deleted estimate #${est.estimateNumber}`);
+    if (!this.isInitializing) this.saveToLocalStorage();
+
+    return { success: true, errors: [] };
   }
 
   public convertEstimateToInvoice(
