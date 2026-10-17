@@ -171,6 +171,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
+  const thermalPrintScrollRef = useRef<HTMLDivElement>(null);
 
   // Click & shortcut timers for F9 and Checkout button (single vs double click)
   const checkoutClickTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -237,6 +238,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
       setTimeout(() => barcodeInputRef.current?.focus(), 150);
     }
   }, [activeSubTab]);
+
+  // Ensure thermal and invoice preview modals start at the top
+  useEffect(() => {
+    if (printModalInvoice && thermalPrintScrollRef.current) {
+      thermalPrintScrollRef.current.scrollTop = 0;
+    }
+  }, [printModalInvoice, printFormat]);
 
   // Sync customer selection
   useEffect(() => {
@@ -1720,14 +1728,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-1">
-                      <input
-                        type="text"
-                        placeholder="Address (முகவரி)"
-                        value={customerAddress}
-                        onChange={(e) => setCustomerAddress(e.target.value)}
-                        className="w-full px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] placeholder:text-slate-400 text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none h-6"
-                      />
+                    <div>
                       <input
                         type="text"
                         placeholder="Notes (குறிப்புகள்)"
@@ -2452,13 +2453,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
             <div className="flex justify-between items-start border-b border-black pb-2">
               <div>
                 <div className="font-black text-base uppercase tracking-wider text-black">
-                  {storeSettings.storeName || 'SRI VENKATESWARA TRADERS'}
+                  {storeSettings.storeName || 'SRI VENKATESWARA FURNITURE AND STORE'}
                 </div>
                 <div className="text-[10px] text-black font-semibold mt-0.5">
                   மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502
                 </div>
                 <div className="text-[10px] font-bold text-black font-mono">
-                  Ph: 8143 84 8143 / 9941333457 | GSTIN: {storeSettings.gstNumber || '33AAAAA0000A1Z5'}
+                  Ph: 8143 84 8143 / 9941333457 | GSTIN/UIN: {storeSettings.gstNumber || '33AGOPV5229Q1ZH'}
                 </div>
               </div>
               <div className="text-right shrink-0">
@@ -2551,7 +2552,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   NET PAYABLE: ₹{printModalInvoice.grandTotal.toFixed(2)}
                 </div>
                 <div className="pt-2 text-[10px]">
-                  <div className="font-semibold">For {storeSettings.storeName || 'SRI VENKATESWARA TRADERS'}</div>
+                  <div className="font-semibold">For {storeSettings.storeName || 'SRI VENKATESWARA FURNITURE AND STORE'}</div>
                   <div className="text-[9px] text-slate-600">Authorized Signatory</div>
                 </div>
               </div>
@@ -2804,7 +2805,10 @@ export const PosBilling: React.FC<PosBillingProps> = ({
 
 
               {/* Modal Document Body */}
-              <div className="print-modal-body flex-1 overflow-y-auto p-4 bg-slate-100 flex justify-center">
+              <div
+                ref={thermalPrintScrollRef}
+                className="print-modal-body flex-1 overflow-y-auto p-2 sm:p-4 bg-slate-100 flex justify-center items-start"
+              >
                 {printFormat === 'a5' ? (
                   /* ======================================================== */
                   /* A5 Half Sheet Invoice (210mm x 148mm - அரை தாள்)         */
@@ -2841,28 +2845,28 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                   /* ======================================================== */
                   <div
                     id="printable-thermal"
-                    className={`${thermalContainerWidth} bg-white p-4 pb-8 text-xs font-mono leading-tight shadow-md border border-slate-300 text-black select-text`}
+                    className={`${thermalContainerWidth} bg-white p-3 sm:p-4 pb-4 text-xs font-mono leading-tight shadow-md border border-slate-300 text-black select-text my-0`}
                   >
                     {/* Store Heading Name in English only, no logo, no Tamil subtitle */}
-                    <div className="text-center pb-2.5 border-b-2 border-dashed border-black">
-                      <div className="font-black text-xl uppercase tracking-wider text-black leading-tight">
-                        {storeSettings.storeName || 'SRI VENKATESWARA TRADERS'}
+                    <div className="text-center pb-2 border-b-2 border-dashed border-black">
+                      <div className="font-black text-base sm:text-lg uppercase tracking-wider text-black leading-tight">
+                        {storeSettings.storeName || 'SRI VENKATESWARA FURNITURE AND STORE'}
                       </div>
-                      <div className="text-xs text-black font-semibold mt-1 leading-tight">
+                      <div className="text-[11px] text-black font-semibold mt-0.5 leading-tight">
                         மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில்
                       </div>
-                      <div className="text-xs text-black font-bold leading-tight">
+                      <div className="text-[11px] text-black font-bold leading-tight">
                         காஞ்சிபுரம் - 631 502.
                       </div>
-                      <div className="text-xs font-bold text-black font-mono mt-1">
+                      <div className="text-[11px] font-bold text-black font-mono mt-0.5">
                         Ph: 8143 84 8143 / 9941333457
                       </div>
-                      <div className="text-xs font-extrabold text-black font-mono mt-0.5">
-                        GSTIN: {storeSettings.gstNumber || '33AAAAA0000A1Z5'}
+                      <div className="text-[11px] font-black text-black font-mono mt-0.5 tracking-wide">
+                        GSTIN/UIN: {storeSettings.gstNumber || '33AGOPV5229Q1ZH'}
                       </div>
                       {hasGst && (
                         <div className="mt-1">
-                          <span className="font-extrabold text-xs uppercase px-2.5 py-0.5 border border-black inline-block tracking-wider bg-slate-50">
+                          <span className="font-extrabold text-[10px] uppercase px-2 py-0.5 border border-black inline-block tracking-wider bg-slate-50">
                             TAX INVOICE
                           </span>
                         </div>
@@ -2870,17 +2874,17 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     </div>
 
                     {/* Bill No, Date & Time */}
-                    <div className="py-2 border-b border-dashed border-black text-xs font-mono">
+                    <div className="py-1.5 border-b border-dashed border-black text-xs font-mono">
                       <div className="flex justify-between items-center font-bold">
                         <span>
                           BILL NO: <span className="font-extrabold">{printModalInvoice.invoiceNumber}</span>
                         </span>
                         <div className="text-right">
                           <span>DATE: {invoiceDateStr}</span>
-                          <span className="ml-3 font-extrabold">TIME: {invoiceTimeStr}</span>
+                          <span className="ml-2 font-extrabold">TIME: {invoiceTimeStr}</span>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center mt-1">
+                      <div className="flex justify-between items-center mt-0.5">
                         <div>
                           <span className="font-bold">CUSTOMER: </span>
                           <span>{printModalInvoice.customerName}</span>
@@ -2901,35 +2905,35 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     </div>
 
                     {/* Items List */}
-                    <table className="w-full text-left my-2 text-xs border-collapse">
+                    <table className="w-full text-left my-1.5 text-xs border-collapse">
                       <thead>
                         <tr className="border-b-2 border-black text-xs font-bold uppercase">
-                          <th className="py-1 w-7 text-center">#</th>
-                          <th className="py-1">ITEM DESCRIPTION</th>
-                          <th className="py-1 text-center w-16">QTY</th>
-                          <th className="py-1 text-right w-20">RATE</th>
-                          {hasGst && <th className="py-1 text-center w-14">GST%</th>}
-                          <th className="py-1 text-right w-24">TOTAL</th>
+                          <th className="py-0.5 w-7 text-center">#</th>
+                          <th className="py-0.5">ITEM DESCRIPTION</th>
+                          <th className="py-0.5 text-center w-16">QTY</th>
+                          <th className="py-0.5 text-right w-20">RATE</th>
+                          {hasGst && <th className="py-0.5 text-center w-14">GST%</th>}
+                          <th className="py-0.5 text-right w-24">TOTAL</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-dotted divide-slate-400">
                         {printModalInvoice.items.map((it, idx) => (
                           <tr key={idx} className="align-top">
-                            <td className="py-1.5 text-center text-[11px] text-slate-700">{idx + 1}</td>
-                            <td className="py-1.5 pr-1">
+                            <td className="py-1 text-center text-[11px] text-slate-700">{idx + 1}</td>
+                            <td className="py-1 pr-1">
                               <div className="font-bold text-black">{it.productName}</div>
                               {it.discountAmount > 0 && (
                                 <div className="text-[10px] text-slate-600">Disc: -₹{it.discountAmount.toFixed(2)}</div>
                               )}
                             </td>
-                            <td className="py-1.5 text-center font-mono font-bold">
+                            <td className="py-1 text-center font-mono font-bold">
                               {it.quantity} {it.unit}
                             </td>
-                            <td className="py-1.5 text-right font-mono">₹{it.rate.toFixed(2)}</td>
+                            <td className="py-1 text-right font-mono">₹{it.rate.toFixed(2)}</td>
                             {hasGst && (
-                              <td className="py-1.5 text-center font-mono text-[11px]">{it.taxRate}%</td>
+                              <td className="py-1 text-center font-mono text-[11px]">{it.taxRate}%</td>
                             )}
-                            <td className="py-1.5 text-right font-mono font-bold text-black">
+                            <td className="py-1 text-right font-mono font-bold text-black">
                               ₹{it.lineTotal.toFixed(2)}
                             </td>
                           </tr>
@@ -2938,13 +2942,13 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                     </table>
 
                     {/* Summary Breakup */}
-                    <div className="border-t-2 border-dashed border-black pt-2 space-y-1.5 text-xs">
-                      <div className="flex justify-between items-center py-2 px-2 bg-slate-50 border-b border-dotted border-black">
+                    <div className="border-t-2 border-dashed border-black pt-1.5 space-y-1 text-xs">
+                      <div className="flex justify-between items-center py-1 px-1.5 bg-slate-50 border-b border-dotted border-black">
                         <span className="font-bold text-xs text-slate-800">
-                          TOTAL ITEMS: <span className="font-mono text-sm font-extrabold">{totalItemsCount}</span>
+                          TOTAL ITEMS: <span className="font-mono text-xs font-extrabold">{totalItemsCount}</span>
                         </span>
-                        <span className="font-black text-sm text-black">
-                          TOTAL QTY: <span className="font-mono text-base font-black">{totalQuantity}</span>
+                        <span className="font-black text-xs text-black">
+                          TOTAL QTY: <span className="font-mono text-sm font-black">{totalQuantity}</span>
                         </span>
                       </div>
 
@@ -2956,7 +2960,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                       )}
 
                       {hasGst && (
-                        <div className="border-y border-dotted border-black py-1.5 px-1 space-y-1 text-[11px] bg-amber-50/40">
+                        <div className="border-y border-dotted border-black py-1 px-1 space-y-0.5 text-[10.5px] bg-amber-50/40">
                           <div className="flex justify-between">
                             <span>Taxable Amount (GST Base):</span>
                             <span className="font-mono">₹{printModalInvoice.taxableAmount.toFixed(2)}</span>
@@ -2978,7 +2982,7 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                               <span className="font-mono">₹{printModalInvoice.igstAmount.toFixed(2)}</span>
                             </div>
                           )}
-                          <div className="flex justify-between font-bold text-xs pt-0.5 border-t border-dotted border-slate-300">
+                          <div className="flex justify-between font-bold text-[11px] pt-0.5 border-t border-dotted border-slate-300">
                             <span>Total GST Amount:</span>
                             <span className="font-mono">
                               ₹{(printModalInvoice.cgstAmount + printModalInvoice.sgstAmount + printModalInvoice.igstAmount).toFixed(2)}
@@ -2994,9 +2998,9 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                         </div>
                       )}
 
-                      <div className="flex justify-between items-center font-black border-t-2 border-b-2 border-black py-2 px-1">
-                        <span className="tracking-wide text-sm font-extrabold">GRAND TOTAL:</span>
-                        <span className="font-mono text-xl font-black text-black">
+                      <div className="flex justify-between items-center font-black border-t-2 border-b-2 border-black py-1 px-1">
+                        <span className="tracking-wide text-xs sm:text-sm font-extrabold">GRAND TOTAL:</span>
+                        <span className="font-mono text-base sm:text-lg font-black text-black">
                           ₹{printModalInvoice.grandTotal.toFixed(2)}
                         </span>
                       </div>
@@ -3013,12 +3017,12 @@ export const PosBilling: React.FC<PosBillingProps> = ({
                       ) : null}
                     </div>
 
-                    <div className="text-center pt-3 mt-3 border-t-2 border-dashed border-black space-y-1 bg-white">
+                    <div className="text-center pt-2 mt-2 border-t-2 border-dashed border-black space-y-0.5 bg-white">
                       <div className="font-bold text-xs tracking-wider">*** THANK YOU, VISIT AGAIN! ***</div>
-                      <div className="text-[10px] font-mono tracking-widest pt-1">
+                      <div className="text-[10px] font-mono tracking-widest pt-0.5">
                         ||| | ||||| || |||| ||| |||||||
                       </div>
-                      <div className="h-6 print:h-12"></div>
+                      <div className="hidden print:block print:h-8"></div>
                     </div>
                   </div>
                 ) : (

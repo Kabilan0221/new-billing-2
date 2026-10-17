@@ -65,9 +65,9 @@ export function printHtmlDirectly(
                 box-sizing: border-box !important;
               }
               html, body {
-                width: ${isThermal ? `${paperWidthMm}mm` : '100%'} !important;
+                width: 100% !important;
                 max-width: ${isThermal ? `${paperWidthMm}mm` : '100%'} !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 padding: 0 !important;
                 background: #ffffff !important;
                 color: #000000 !important;
@@ -81,13 +81,15 @@ export function printHtmlDirectly(
               }
               @media screen {
                 body {
-                  padding: 4px;
+                  padding: 2px;
                 }
               }
               @media print {
                 html, body {
                   margin: 0 !important;
                   padding: 0 !important;
+                  width: 100% !important;
+                  max-width: ${isThermal ? `${paperWidthMm}mm` : '100%'} !important;
                   height: auto !important;
                   overflow: visible !important;
                 }

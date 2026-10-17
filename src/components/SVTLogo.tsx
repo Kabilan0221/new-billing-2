@@ -131,7 +131,7 @@ export const SVTLogo: React.FC<SVTLogoProps> = ({
       {showText && (
         <div className="flex flex-col leading-tight">
           <span className="font-black tracking-wide text-xs text-slate-900">SRI VENKATESWARA</span>
-          <span className="text-[10px] text-slate-500 font-medium">SVT TRADERS</span>
+          <span className="text-[10px] text-slate-500 font-medium tracking-tight">FURNITURE AND STORE</span>
         </div>
       )}
     </div>

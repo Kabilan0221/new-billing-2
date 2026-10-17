@@ -146,11 +146,11 @@ namespace ShopBilling.Core.Models
 
     public class AppSettings
     {
-        public string StoreName { get; set; } = "Sri Murugan Super Market";
-        public string StoreAddress { get; set; } = "124 Bazaar Road, T. Nagar, Chennai - 600017";
-        public string StorePhone { get; set; } = "044-24345678";
-        public string StoreEmail { get; set; } = "contact@murugansupermarket.com";
-        public string GstNumber { get; set; } = "33AAAAA0000A1Z5";
+        public string StoreName { get; set; } = "Sri Venkateswara Furniture and Store";
+        public string StoreAddress { get; set; } = "Madam Street, Near Anna Sports Park, Kanchipuram - 631 502";
+        public string StorePhone { get; set; } = "8143 84 8143 / 9941333457";
+        public string StoreEmail { get; set; } = "contact@srivenkateswarafurniture.com";
+        public string GstNumber { get; set; } = "33AGOPV5229Q1ZH";
         public string CurrencySymbol { get; set; } = "₹";
         public string ReceiptPaperSize { get; set; } = "80mm Thermal"; // 80mm Thermal or A4 Full Page
         public decimal DefaultTaxRate { get; set; } = 5m;

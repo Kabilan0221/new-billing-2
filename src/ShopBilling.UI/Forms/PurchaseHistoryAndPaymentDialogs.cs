@@ -351,9 +351,9 @@ namespace ShopBilling.UI.Forms
             var brush = Brushes.Black;
 
             int y = 40;
-            g.DrawString("SRI MURUGAN SUPER MARKET — GOODS INBOUND RECEIPT", fontTitle, brush, 40, y);
+            g.DrawString("SRI VENKATESWARA FURNITURE AND STORE — GOODS INBOUND RECEIPT", fontTitle, brush, 40, y);
             y += 25;
-            g.DrawString("124 Bazaar Road, T. Nagar, Chennai - 600017 | GSTIN: 33AAAAA0000A1Z5", fontRegular, brush, 40, y);
+            g.DrawString("Madam Street, Near Anna Sports Park, Kanchipuram - 631 502 | Ph: 8143 84 8143 | GSTIN: 33AGOPV5229Q1ZH", fontRegular, brush, 40, y);
             y += 20;
             g.DrawLine(Pens.Black, 40, y, 760, y);
             y += 10;

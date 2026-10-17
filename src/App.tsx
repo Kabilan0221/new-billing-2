@@ -169,7 +169,7 @@ export default function App() {
           <SVTLogo size={24} className="drop-shadow-xs shrink-0" />
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-bold tracking-wider text-amber-300 text-xs truncate">ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)</span>
+              <span className="font-bold tracking-wider text-amber-300 text-xs truncate">ஸ்ரீ வெங்கடேஸ்வரா பர்னிச்சர் & ஸ்டோர் | SRI VENKATESWARA FURNITURE AND STORE</span>
               <span className="hidden xl:inline text-[10px] text-emerald-300 bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-600/40 shrink-0">
                 சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
               </span>

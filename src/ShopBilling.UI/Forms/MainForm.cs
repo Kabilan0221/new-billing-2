@@ -127,7 +127,7 @@ namespace ShopBilling.UI.Forms
 
             var lblStoreInfo = new Label
             {
-                Text = "Sri Murugan Super Market | Offline Mode (SQLite WAL) | Terminal #01",
+                Text = "Sri Venkateswara Furniture and Store | Offline Mode (SQLite WAL) | Terminal #01",
                 ForeColor = Color.FromArgb(180, 205, 237),
                 Font = new Font("Segoe UI", 9.5f),
                 AutoSize = false,

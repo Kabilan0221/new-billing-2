@@ -35,7 +35,7 @@ export const BarcodeDialog: React.FC<BarcodeDialogProps> = ({
         <div className="bg-gradient-to-r from-[#173e65] to-[#255a90] text-white px-4 py-2.5 flex items-center justify-between select-none">
           <div className="flex items-center gap-2">
             <SVTLogo size={20} />
-            <h3 className="text-xs font-semibold">Barcode Studio — Sri Venkateswara Label Print</h3>
+            <h3 className="text-xs font-semibold">Barcode Studio — Sri Venkateswara Furniture and Store Label Print</h3>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white cursor-pointer">
             <X className="w-4 h-4" />
@@ -89,7 +89,7 @@ export const BarcodeDialog: React.FC<BarcodeDialogProps> = ({
                   <div className="flex items-center gap-1.5 overflow-hidden">
                     <SVTLogo size={14} className="shrink-0" />
                     <span className="font-bold text-[9.5px] text-slate-900 uppercase tracking-tight truncate">
-                      Sri Venkateswara (SVT)
+                      Sri Venkateswara Furniture and Store
                     </span>
                   </div>
                   <span className="font-mono font-bold text-xs text-slate-900 shrink-0">

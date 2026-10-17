@@ -210,12 +210,12 @@ namespace ShopBilling.Data.Database
 
                 -- Store Settings
                 INSERT OR IGNORE INTO settings (key, value, description) VALUES
-                    ('StoreName', 'Sri Murugan Super Market', 'Retail Business Name'),
-                    ('StoreAddress', '124 Bazaar Road, T. Nagar, Chennai - 600017', 'Store physical address'),
-                    ('StorePhone', '044-24345678', 'Contact number'),
-                    ('GstNumber', '33AAAAA0000A1Z5', 'GSTIN identification'),
+                    ('StoreName', 'Sri Venkateswara Furniture and Store', 'Retail Business Name'),
+                    ('StoreAddress', 'Madam Street, Near Anna Sports Park, Kanchipuram - 631 502', 'Store physical address'),
+                    ('StorePhone', '8143 84 8143 / 9941333457', 'Contact number'),
+                    ('GstNumber', '33AGOPV5229Q1ZH', 'GSTIN identification'),
                     ('DefaultTaxRate', '5', 'Default GST rate percentage'),
-                    ('BarcodeFormat', 'EAN13', 'Default generated barcode type');
+                    ('BarcodeFormat', 'Code128', 'Default generated barcode type');
             ";
         }
 

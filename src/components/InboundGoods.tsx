@@ -1250,7 +1250,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
                 <SVTLogo size={28} />
                 <div className="text-left">
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
-                    ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)
+                    ஸ்ரீ வெங்கடேஸ்வரா பர்னிச்சர் & ஸ்டோர் | SRI VENKATESWARA FURNITURE AND STORE
                   </h2>
                   <p className="text-[10px] text-slate-600 font-semibold">
                     சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
@@ -1261,7 +1261,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
                 மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502
               </p>
               <p className="text-[10px] text-slate-500 font-mono">
-                📱 8143 84 8143 / 9941333457 / 044 2723 1947 · GSTIN: 33AAAAA0000A1Z5
+                📱 8143 84 8143 / 9941333457 / 044 2723 1947 · GSTIN/UIN: 33AGOPV5229Q1ZH
               </p>
               <div className="pt-1 font-bold uppercase tracking-wider text-xs text-blue-900">
                 GOODS RECEIVED VOUCHER (INBOUND)

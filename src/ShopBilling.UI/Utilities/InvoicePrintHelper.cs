@@ -90,11 +90,11 @@ namespace ShopBilling.UI.Utilities
             var sfLeft = new StringFormat { Alignment = StringAlignment.Near };
 
             // Store Header
-            g.DrawString("SRI MEENAKSHI SUPER STORE", titleFont, Brushes.Black, new RectangleF(0, y, width, 22), sfCenter);
+            g.DrawString("SRI VENKATESWARA FURNITURE AND STORE", titleFont, Brushes.Black, new RectangleF(0, y, width, 22), sfCenter);
             y += 22;
-            g.DrawString("124, West Masi Street, Madurai - 625001", subFont, Brushes.Black, new RectangleF(0, y, width, 16), sfCenter);
+            g.DrawString("Madam Street, Near Anna Sports Park, Kanchipuram - 631 502", subFont, Brushes.Black, new RectangleF(0, y, width, 16), sfCenter);
             y += 16;
-            g.DrawString("Phone: 0452-2345678 | GSTIN: 33AABCS1429B1Z1", subFont, Brushes.Black, new RectangleF(0, y, width, 16), sfCenter);
+            g.DrawString("Phone: 8143 84 8143 / 9941333457 | GSTIN: 33AGOPV5229Q1ZH", subFont, Brushes.Black, new RectangleF(0, y, width, 16), sfCenter);
             y += 18;
 
             g.DrawLine(Pens.Black, 5, y, width - 5, y);
@@ -217,11 +217,11 @@ namespace ShopBilling.UI.Utilities
             g.DrawString("TAX INVOICE", titleFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 28), sfCenter);
             y += 32;
 
-            g.DrawString("SRI MEENAKSHI SUPER STORE", new Font("Segoe UI", 12f, FontStyle.Bold), Brushes.Black, margin, y);
+            g.DrawString("SRI VENKATESWARA FURNITURE AND STORE", new Font("Segoe UI", 12f, FontStyle.Bold), Brushes.Black, margin, y);
             y += 20;
-            g.DrawString("124, West Masi Street, Madurai - 625001, Tamil Nadu | Phone: 0452-2345678", subFont, Brushes.Black, margin, y);
+            g.DrawString("Madam Street, Near Anna Sports Park, Kanchipuram - 631 502, Tamil Nadu | Phone: 8143 84 8143 / 9941333457", subFont, Brushes.Black, margin, y);
             y += 16;
-            g.DrawString("GSTIN: 33AABCS1429B1Z1 | State Code: 33", boldFont, Brushes.Black, margin, y);
+            g.DrawString("GSTIN: 33AGOPV5229Q1ZH | State Code: 33", boldFont, Brushes.Black, margin, y);
             y += 24;
 
             g.DrawLine(Pens.DarkGray, margin, y, margin + pageWidth, y);
@@ -350,9 +350,9 @@ namespace ShopBilling.UI.Utilities
             var sfRight = new StringFormat { Alignment = StringAlignment.Far };
 
             // Store Header (Compact Horizontal layout for A5 Landscape)
-            g.DrawString("SRI VENKATESWARA TRADERS (SVT) - TAX INVOICE", titleFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 20), sfCenter);
+            g.DrawString("SRI VENKATESWARA FURNITURE AND STORE - TAX INVOICE", titleFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 20), sfCenter);
             y += 20;
-            g.DrawString("Madam Street, Near Anna Sports Park, Kanchipuram - 631 502 | Ph: 8143 84 8143 / 9941333457 | GSTIN: 33AAAAA0000A1Z5", smallFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 16), sfCenter);
+            g.DrawString("Madam Street, Near Anna Sports Park, Kanchipuram - 631 502 | Ph: 8143 84 8143 / 9941333457 | GSTIN: 33AGOPV5229Q1ZH", smallFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 16), sfCenter);
             y += 18;
 
             g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);
@@ -401,7 +401,7 @@ namespace ShopBilling.UI.Utilities
             y += 24;
 
             g.DrawString($"Payment: {inv.PaymentStatus} (Paid: ₹{inv.AmountPaid:F2}) | Thank you! Visit again.", smallFont, Brushes.Black, margin, y);
-            g.DrawString("For SRI VENKATESWARA TRADERS - Authorized Signatory", smallFont, Brushes.Black, new RectangleF(margin + 420, y, 350, 16), sfRight);
+            g.DrawString("For SRI VENKATESWARA FURNITURE AND STORE - Authorized Signatory", smallFont, Brushes.Black, new RectangleF(margin + 420, y, 350, 16), sfRight);
         }
 
         private static void RenderA4DualInvoice(PrintPageEventArgs e, InvoiceHeader inv)
@@ -437,9 +437,9 @@ namespace ShopBilling.UI.Utilities
             var sfRight = new StringFormat { Alignment = StringAlignment.Far };
 
             // Header Banner
-            g.DrawString($"SRI VENKATESWARA TRADERS  [{copyLabel}]", boldFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 16), sfCenter);
+            g.DrawString($"SRI VENKATESWARA FURNITURE AND STORE  [{copyLabel}]", boldFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 16), sfCenter);
             y += 16;
-            g.DrawString("Madam Street, Kanchipuram - 631 502 | Ph: 8143 84 8143 / 9941333457 | GSTIN: 33AAAAA0000A1Z5", smallFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 14), sfCenter);
+            g.DrawString("Madam Street, Kanchipuram - 631 502 | Ph: 8143 84 8143 / 9941333457 | GSTIN: 33AGOPV5229Q1ZH", smallFont, Brushes.Black, new RectangleF(margin, y, pageWidth, 14), sfCenter);
             y += 16;
 
             g.DrawLine(Pens.Black, margin, y, margin + pageWidth, y);

@@ -191,8 +191,8 @@ class SQLiteIndexedEngine {
       this.auditLogs = Array.isArray(d.auditLogs) ? d.auditLogs : [];
       if (d.appSettings) {
         this.appSettings = { ...this.appSettings, ...d.appSettings };
-        this.appSettings.storeName = 'Sri Venkateswara (SVT)';
-        this.appSettings.storeTamilName = 'ஸ்ரீ வெங்கடேஸ்வரா';
+        this.appSettings.storeName = 'Sri Venkateswara Furniture and Store';
+        this.appSettings.storeTamilName = 'ஸ்ரீ வெங்கடேஸ்வரா பர்னிச்சர் & ஸ்டோர்';
         this.appSettings.storeSubtitle = '';
         this.appSettings.storeOwner = 'பெரியநத்தம் வெ.பெருமாள் நாயகர்';
         this.appSettings.storeBlessing = 'என் தாய் தந்தை துணை';
@@ -201,6 +201,7 @@ class SQLiteIndexedEngine {
         this.appSettings.storeWhatsApp = '8143 84 8143';
         this.appSettings.storeLandline = '';
         this.appSettings.receiptPaperSize = '104mm (4-Inch) Thermal';
+        this.appSettings.gstNumber = '33AGOPV5229Q1ZH';
       }
 
       // Recalculate auto-increment IDs safely based on loaded records
@@ -3850,8 +3851,8 @@ class SQLiteIndexedEngine {
   // PHASE 7: DASHBOARD & REPORTING SERVICES
   // -------------------------------------------------------------
   private appSettings: AppSettings = {
-    storeName: 'Sri Venkateswara (SVT)',
-    storeTamilName: 'ஸ்ரீ வெங்கடேஸ்வரா',
+    storeName: 'Sri Venkateswara Furniture and Store',
+    storeTamilName: 'ஸ்ரீ வெங்கடேஸ்வரா பர்னிச்சர் & ஸ்டோர்',
     storeSubtitle: '',
     storeOwner: 'பெரியநத்தம் வெ.பெருமாள் நாயகர்',
     storeBlessing: 'என் தாய் தந்தை துணை',
@@ -3859,8 +3860,8 @@ class SQLiteIndexedEngine {
     storePhone: '8143 84 8143 / 9941333457',
     storeWhatsApp: '8143 84 8143',
     storeLandline: '',
-    storeEmail: 'contact@srivenkateswara-svt.com',
-    gstNumber: '33AAAAA0000A1Z5',
+    storeEmail: 'contact@srivenkateswarafurniture.com',
+    gstNumber: '33AGOPV5229Q1ZH',
     currencySymbol: '₹',
     receiptPaperSize: '104mm (4-Inch) Thermal',
     defaultTaxRate: 5,

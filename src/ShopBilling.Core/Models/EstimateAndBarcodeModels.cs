@@ -112,7 +112,7 @@ namespace ShopBilling.Core.Models
         public bool IncludePrice { get; set; } = true;
         public bool IncludeBarcodeText { get; set; } = true;
         public bool IncludeStoreName { get; set; } = true;
-        public string StoreName { get; set; } = "SRI MEENAKSHI SUPER STORE";
+        public string StoreName { get; set; } = "SRI VENKATESWARA FURNITURE AND STORE";
         public string CurrencySymbol { get; set; } = "₹";
     }
 

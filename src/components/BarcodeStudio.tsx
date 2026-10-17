@@ -65,7 +65,7 @@ export const BarcodeStudio: React.FC<BarcodeStudioProps> = ({ onRefreshData, onN
     includeStoreName: true,
     includeLogo: true,
     includeAddress: false,
-    storeName: 'SRI VENKATESWARA',
+    storeName: 'SRI VENKATESWARA FURNITURE AND STORE',
     storeSubtitle: 'SVT • Kanchipuram',
     storeAddress: 'மடம் தெரு, காஞ்சிபுரம் - 631 502',
     storePhone: '8143 84 8143',
@@ -316,7 +316,7 @@ export const BarcodeStudio: React.FC<BarcodeStudioProps> = ({ onRefreshData, onN
           )}
           {config.includeStoreName && (
             <div className="font-black text-[7.5px] uppercase tracking-tighter text-slate-900 truncate">
-              {config.storeName || 'SRI VENKATESWARA'}
+              {config.storeName || 'SRI VENKATESWARA FURNITURE AND STORE'}
             </div>
           )}
         </div>
@@ -379,7 +379,7 @@ export const BarcodeStudio: React.FC<BarcodeStudioProps> = ({ onRefreshData, onN
           <SVTLogo size={32} />
           <div>
             <h1 className="text-sm font-bold tracking-wide flex items-center gap-2">
-              <span>BARCODE STUDIO (F4) — Sri Venkateswara Label Designer & Batch Printer</span>
+              <span>BARCODE STUDIO (F4) — Sri Venkateswara Furniture and Store Label Designer & Batch Printer</span>
               <span className="text-[10px] bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.2 rounded">
                 5×13 (65 Labels / Sheet) Active
               </span>

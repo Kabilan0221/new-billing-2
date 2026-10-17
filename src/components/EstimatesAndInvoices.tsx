@@ -22,7 +22,7 @@ import { EstimateHeader, Customer, Product, InvoiceHeader, InvoiceItem } from '.
 import { SVTLogo } from './SVTLogo';
 import { A4DotMatrixInvoice } from './A4DotMatrixInvoice';
 import { printHtmlDirectly } from '../services/printService';
-import { generateA4DotMatrixHtml, generateThermalReceiptHtml } from '../services/a4InvoiceHtmlGenerator';
+import { generateA4DotMatrixHtml, generateThermalReceiptHtml, generateThermalEstimateHtml } from '../services/a4InvoiceHtmlGenerator';
 
 interface EstimatesAndInvoicesProps {
   onRefreshData?: () => void;
@@ -74,7 +74,7 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
 
   // Print Modals
   const [printEstimate, setPrintEstimate] = useState<EstimateHeader | null>(null);
-  const [estimatePrintFormat, setEstimatePrintFormat] = useState<'a4' | 'a5'>('a4');
+  const [estimatePrintFormat, setEstimatePrintFormat] = useState<'thermal-80mm' | 'thermal-104mm' | 'a4' | 'a5'>('thermal-80mm');
   const [printInvoice, setPrintInvoice] = useState<InvoiceHeader | null>(null);
   const [invoicePrintFormat, setInvoicePrintFormat] = useState<'thermal-80mm' | 'thermal-104mm' | 'a4'>('thermal-80mm');
 
@@ -466,12 +466,31 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
                       {/* ACTIONS COLUMN: Print, Edit, Delete, View */}
                       <td className="py-2 px-3 text-center">
                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {/* 1. Print Quotation */}
+                          {/* 1. Direct Thermal Print */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const settings = db.getAppSettings();
+                              printHtmlDirectly(
+                                generateThermalEstimateHtml(est, settings, 80),
+                                `Thermal_Estimate_${est.estimateNumber}`,
+                                80
+                              );
+                              showNotification('success', `Estimate sent to 80mm thermal printer for #${est.estimateNumber}`);
+                            }}
+                            className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded font-bold text-[11px] flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Direct 3-Inch (80mm) Thermal POS Print"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Thermal</span>
+                          </button>
+
+                          {/* 2. Print Preview Modal */}
                           <button
                             type="button"
                             onClick={() => setPrintEstimate(est)}
                             className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded font-semibold text-[11px] flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Print Quotation"
+                            title="Print Quotation Preview"
                           >
                             <Printer className="w-3.5 h-3.5 text-blue-600" />
                             <span>Print</span>
@@ -995,162 +1014,199 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
       )}
 
       {/* ---------------- PRINT ESTIMATE MODAL ---------------- */}
-      {printEstimate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <style>{`
-            @media print {
-              @page {
-                size: ${estimatePrintFormat === 'a5' ? '210mm 148mm' : 'A4 portrait'};
-                margin: ${estimatePrintFormat === 'a5' ? '4mm 6mm' : '8mm 6mm'};
-              }
-              body * { visibility: hidden !important; }
-              #printable-estimate, #printable-estimate * { visibility: visible !important; }
-              #printable-estimate {
-                position: absolute !important; left: 0 !important; top: 0 !important;
-                width: 100% !important; max-width: 198mm !important; margin: 0 auto !important;
-                padding: 6mm 8mm !important; border: 1px solid #000000 !important;
-                background: #ffffff !important; color: #000000 !important; display: block !important;
-              }
-            }
-          `}</style>
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-slate-300 overflow-hidden">
-            <div className="bg-[#182b49] text-white px-4 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Printer className="w-4 h-4 text-indigo-300" />
-                <h3 className="font-bold text-xs">PRINT PREVIEW — COMMERCIAL ESTIMATE ({printEstimate.estimateNumber})</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={estimatePrintFormat}
-                  onChange={(e) => setEstimatePrintFormat(e.target.value as 'a4' | 'a5')}
-                  className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none cursor-pointer"
-                >
-                  <option value="a4" className="text-slate-900 font-medium">📄 A4 Full Sheet (210×297mm)</option>
-                  <option value="a5" className="text-slate-900 font-medium">📄 A5 Half Sheet (210×148mm)</option>
-                </select>
-                <button onClick={() => setPrintEstimate(null)} className="text-slate-300 hover:text-white font-bold p-1">
-                  ✕
-                </button>
-              </div>
-            </div>
+      {printEstimate && (() => {
+        const storeSettings = db.getAppSettings();
+        const estWidthMm = estimatePrintFormat === 'thermal-104mm' ? 104 : estimatePrintFormat === 'thermal-80mm' ? 80 : 210;
 
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-100 flex justify-center">
-              <div id="printable-estimate" className="bg-white p-8 w-full max-w-[760px] shadow-md border border-slate-300 text-xs text-slate-900 space-y-4">
-                <div className="bg-amber-100 border border-amber-300 p-2 text-center text-amber-900 font-bold text-xs uppercase tracking-wider">
-                  ESTIMATE / QUOTATION — NOT A TAX INVOICE
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <style>{`
+              @media print {
+                @page {
+                  size: ${estimatePrintFormat === 'a5' ? '210mm 148mm' : estimatePrintFormat.startsWith('thermal') ? `${estWidthMm}mm auto` : 'A4 portrait'};
+                  margin: ${estimatePrintFormat.startsWith('thermal') ? '0mm' : estimatePrintFormat === 'a5' ? '4mm 6mm' : '8mm 6mm'};
+                }
+                body * { visibility: hidden !important; }
+                #printable-estimate, #printable-estimate * { visibility: visible !important; }
+                #printable-estimate {
+                  position: absolute !important; left: 0 !important; top: 0 !important;
+                  width: 100% !important; max-width: ${estimatePrintFormat.startsWith('thermal') ? `${estWidthMm}mm` : '198mm'} !important; margin: 0 auto !important;
+                  padding: ${estimatePrintFormat.startsWith('thermal') ? '2mm 3mm' : '6mm 8mm'} !important; border: ${estimatePrintFormat.startsWith('thermal') ? 'none' : '1px solid #000000'} !important;
+                  background: #ffffff !important; color: #000000 !important; display: block !important;
+                }
+              }
+            `}</style>
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-slate-300 overflow-hidden">
+              <div className="bg-[#182b49] text-white px-4 py-2.5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-emerald-400" />
+                  <h3 className="font-bold text-xs">PRINT PREVIEW — ESTIMATE / QUOTATION ({printEstimate.estimateNumber})</h3>
                 </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={estimatePrintFormat}
+                    onChange={(e) => setEstimatePrintFormat(e.target.value as any)}
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none cursor-pointer"
+                  >
+                    <option value="thermal-80mm" className="text-slate-900 font-medium">🧾 3" Thermal (80mm POS Roll)</option>
+                    <option value="thermal-104mm" className="text-slate-900 font-medium">🧾 4" Thermal (104mm POS Roll)</option>
+                    <option value="a4" className="text-slate-900 font-medium">📄 A4 Full Sheet (210×297mm)</option>
+                    <option value="a5" className="text-slate-900 font-medium">📄 A5 Half Sheet (210×148mm)</option>
+                  </select>
+                  <button onClick={() => setPrintEstimate(null)} className="text-slate-300 hover:text-white font-bold p-1">
+                    ✕
+                  </button>
+                </div>
+              </div>
 
-                <div className="text-center space-y-1 border-b border-slate-300 pb-3">
-                  <div className="flex items-center justify-center gap-2.5">
-                    <SVTLogo size={32} />
-                    <div className="text-left">
-                      <h2 className="text-base font-black tracking-wide text-slate-900 leading-tight">
-                        ஸ்ரீ வெங்கடேஸ்வரா | SRI VENKATESWARA (SVT)
-                      </h2>
-                      <p className="text-[10px] text-slate-600 font-semibold">
-                        சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 flex justify-center items-start">
+                {estimatePrintFormat.startsWith('thermal') ? (
+                  <div
+                    className={`${estimatePrintFormat === 'thermal-104mm' ? 'w-[420px]' : 'w-[320px]'} bg-white p-3 sm:p-4 pb-4 shadow-md border border-slate-300 font-mono text-xs`}
+                    dangerouslySetInnerHTML={{
+                      __html: generateThermalEstimateHtml(printEstimate, storeSettings, estWidthMm),
+                    }}
+                  />
+                ) : (
+                  <div id="printable-estimate" className="bg-white p-8 w-full max-w-[760px] shadow-md border border-slate-300 text-xs text-slate-900 space-y-4">
+                    <div className="bg-amber-100 border border-amber-300 p-2 text-center text-amber-900 font-bold text-xs uppercase tracking-wider">
+                      ESTIMATE / QUOTATION — NOT A TAX INVOICE
+                    </div>
+
+                    <div className="text-center space-y-1 border-b border-slate-300 pb-3">
+                      <div className="flex items-center justify-center gap-2.5">
+                        <SVTLogo size={32} />
+                        <div className="text-left">
+                          <h2 className="text-base font-black tracking-wide text-slate-900 leading-tight">
+                            ஸ்ரீ வெங்கடேஸ்வரா பர்னிச்சர் & ஸ்டோர் | SRI VENKATESWARA FURNITURE AND STORE
+                          </h2>
+                          <p className="text-[10px] text-slate-600 font-semibold">
+                            சாமிமில் • டிம்பர்ஸ் • பர்னிச்சர்ஸ் • ஸ்டீல்டோர்ஸ்
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502
+                      </p>
+                      <p className="text-[11px] font-mono text-slate-600">
+                        📱 WhatsApp: 8143 84 8143 | Ph: 9941333457 / 044 2723 1947 | GSTIN/UIN: 33AGOPV5229Q1ZH
                       </p>
                     </div>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    மடம் தெரு, அண்ணா விளையாட்டு பூங்கா அருகில், காஞ்சிபுரம் - 631 502
-                  </p>
-                  <p className="text-[11px] font-mono text-slate-600">
-                    📱 WhatsApp: 8143 84 8143 | Ph: 9941333457 / 044 2723 1947 | GSTIN: 33AAAAA0000A1Z5
-                  </p>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <span className="font-bold block text-slate-700">QUOTATION TO:</span>
-                    <p className="font-bold text-sm text-slate-900">{printEstimate.customerName}</p>
-                    <p>Phone: {printEstimate.customerMobile || 'N/A'}</p>
-                    <p>GSTIN: {printEstimate.customerGstin || 'Unregistered / Consumer'}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold block text-slate-700">DOCUMENT DETAILS:</span>
-                    <p className="font-bold text-sm font-mono text-blue-900">{printEstimate.estimateNumber}</p>
-                    <p>Date: {new Date(printEstimate.estimateDate).toLocaleDateString()}</p>
-                    <p>Valid Until: {new Date(printEstimate.validUntil || '').toLocaleDateString()}</p>
-                    <p>Status: <strong className="uppercase">{printEstimate.status}</strong></p>
-                  </div>
-                </div>
-
-                <table className="w-full text-left border-collapse border border-slate-300 text-[11px]">
-                  <thead className="bg-slate-100 border-b border-slate-300 font-bold">
-                    <tr>
-                      <th className="p-1.5 border-r border-slate-300 text-center w-8">#</th>
-                      <th className="p-1.5 border-r border-slate-300">Description</th>
-                      <th className="p-1.5 border-r border-slate-300 text-right w-14">Qty</th>
-                      <th className="p-1.5 border-r border-slate-300 text-right w-16">Rate</th>
-                      <th className="p-1.5 border-r border-slate-300 text-right w-14">Disc</th>
-                      <th className="p-1.5 border-r border-slate-300 text-center w-12">GST</th>
-                      <th className="p-1.5 text-right w-20">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {printEstimate.items.map((it, idx) => (
-                      <tr key={idx}>
-                        <td className="p-1.5 text-center border-r border-slate-200">{idx + 1}</td>
-                        <td className="p-1.5 border-r border-slate-200 font-medium">
-                          {it.productName} <span className="font-mono text-slate-400">({it.productCode})</span>
-                        </td>
-                        <td className="p-1.5 text-right border-r border-slate-200">
-                          {it.quantity} {it.unit}
-                        </td>
-                        <td className="p-1.5 text-right border-r border-slate-200">₹{it.rate.toFixed(2)}</td>
-                        <td className="p-1.5 text-right border-r border-slate-200">
-                          {it.discountAmount > 0 ? `₹${it.discountAmount.toFixed(2)}` : '-'}
-                        </td>
-                        <td className="p-1.5 text-center border-r border-slate-200">{it.taxRate}%</td>
-                        <td className="p-1.5 text-right font-bold">₹{it.lineTotal.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className="flex justify-between items-start pt-2">
-                  <div className="w-3/5 text-[10px] text-slate-600 space-y-1">
-                    <span className="font-bold text-slate-800 block text-[11px]">TERMS:</span>
-                    <p>1. Prices are valid for 15 days from date of quotation.</p>
-                    <p>2. Applicable GST charged as per statutory regulations.</p>
-                  </div>
-                  <div className="w-2/5 space-y-1 text-right text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Taxable:</span>
-                      <span>₹{printEstimate.taxableAmount.toFixed(2)}</span>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="font-bold block text-slate-700">QUOTATION TO:</span>
+                        <p className="font-bold text-sm text-slate-900">{printEstimate.customerName}</p>
+                        <p>Phone: {printEstimate.customerMobile || 'N/A'}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold block text-slate-700">DOCUMENT DETAILS:</span>
+                        <p className="font-bold text-sm font-mono text-blue-900">{printEstimate.estimateNumber}</p>
+                        <p>Date: {new Date(printEstimate.estimateDate).toLocaleDateString()}</p>
+                        {printEstimate.validUntil && (
+                          <p>Valid Until: {new Date(printEstimate.validUntil).toLocaleDateString()}</p>
+                        )}
+                        <p>Status: <strong className="uppercase">{printEstimate.status}</strong></p>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">GST Total:</span>
-                      <span>₹{printEstimate.totalTaxAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-black text-sm border-t border-slate-300 pt-1 text-slate-950">
-                      <span>Grand Total:</span>
-                      <span>₹{printEstimate.grandTotal.toFixed(2)}</span>
+
+                    <table className="w-full text-left border-collapse border border-slate-300 text-[11px]">
+                      <thead className="bg-slate-100 border-b border-slate-300 font-bold">
+                        <tr>
+                          <th className="p-1.5 border-r border-slate-300 text-center w-8">#</th>
+                          <th className="p-1.5 border-r border-slate-300">Description</th>
+                          <th className="p-1.5 border-r border-slate-300 text-right w-14">Qty</th>
+                          <th className="p-1.5 border-r border-slate-300 text-right w-16">Rate</th>
+                          <th className="p-1.5 border-r border-slate-300 text-right w-14">Disc</th>
+                          <th className="p-1.5 border-r border-slate-300 text-center w-12">GST</th>
+                          <th className="p-1.5 text-right w-20">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {printEstimate.items.map((it, idx) => (
+                          <tr key={idx}>
+                            <td className="p-1.5 text-center border-r border-slate-200">{idx + 1}</td>
+                            <td className="p-1.5 border-r border-slate-200 font-medium">
+                              {it.productName} <span className="font-mono text-slate-400">({it.productCode})</span>
+                            </td>
+                            <td className="p-1.5 text-right border-r border-slate-200">
+                              {it.quantity} {it.unit}
+                            </td>
+                            <td className="p-1.5 text-right border-r border-slate-200">₹{it.rate.toFixed(2)}</td>
+                            <td className="p-1.5 text-right border-r border-slate-200">
+                              {it.discountAmount > 0 ? `₹${it.discountAmount.toFixed(2)}` : '-'}
+                            </td>
+                            <td className="p-1.5 text-center border-r border-slate-200">{it.taxRate}%</td>
+                            <td className="p-1.5 text-right font-bold">₹{it.lineTotal.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <div className="flex justify-between items-start pt-2">
+                      <div className="w-3/5 text-[10px] text-slate-600 space-y-1">
+                        <span className="font-bold text-slate-800 block text-[11px]">TERMS:</span>
+                        <p>1. Prices are valid for 15 days from date of quotation.</p>
+                        <p>2. Applicable GST charged as per statutory regulations.</p>
+                      </div>
+                      <div className="w-2/5 space-y-1 text-right text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Taxable:</span>
+                          <span>₹{printEstimate.taxableAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">GST Total:</span>
+                          <span>₹{printEstimate.totalTaxAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-black text-sm border-t border-slate-300 pt-1 text-slate-950">
+                          <span>Grand Total:</span>
+                          <span>₹{printEstimate.grandTotal.toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+
+              <div className="p-3 bg-white border-t border-slate-200 flex justify-between items-center shrink-0">
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {estimatePrintFormat.startsWith('thermal') ? 'Thermal Estimate (Continuous POS Roll)' : 'A4/A5 Commercial Quotation'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPrintEstimate(null)}
+                    className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded text-xs"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (estimatePrintFormat.startsWith('thermal')) {
+                        printHtmlDirectly(
+                          generateThermalEstimateHtml(printEstimate, storeSettings, estWidthMm),
+                          `Thermal_Estimate_${printEstimate.estimateNumber}`,
+                          estWidthMm
+                        );
+                        showNotification('success', `Thermal estimate sent to printer for #${printEstimate.estimateNumber}`);
+                      } else {
+                        window.print();
+                      }
+                    }}
+                    className="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Direct Thermal Print (F9)"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>
+                      {estimatePrintFormat.startsWith('thermal') ? 'Print Thermal (F9)' : 'Print Document'}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-
-            <div className="p-3 bg-white border-t border-slate-200 flex justify-end gap-2">
-              <button
-                onClick={() => setPrintEstimate(null)}
-                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded text-xs"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="px-5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded text-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Document</span>
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ---------------- PRINT INVOICE MODAL ---------------- */}
       {printInvoice && (() => {
@@ -1211,14 +1267,14 @@ export const EstimatesAndInvoices: React.FC<EstimatesAndInvoicesProps> = ({
                     type="button"
                     onClick={() => {
                       printHtmlDirectly(
-                        generateThermalReceiptHtml(printInvoice, storeSettings, 80),
+                        generateThermalReceiptHtml(printInvoice, storeSettings, widthMm),
                         `Thermal_Receipt_${printInvoice.invoiceNumber}`,
-                        80
+                        widthMm
                       );
                       showNotification('success', `Thermal receipt sent to printer for #${printInvoice.invoiceNumber}`);
                     }}
                     className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    title="Direct 80mm Thermal Receipt Print (F9)"
+                    title="Direct Thermal Receipt Print (F9)"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>Print Thermal (F9)</span>
